@@ -1,0 +1,123 @@
+
+
+\section{TODO}
+##put on git
+##implement 2-class clustering algorithm
+##TODO: Allow genotype calls as an input option, instead of count matrices.
+##Error-checks
+##Test-suite (/tests)
+##Final output: provide actual haplotype: majority vote for each var in gt_phased
+##decide which, if any, fcns to make private
+
+\section{Qs/TBDs}
+
+##*###
+##call_gt
+##*###
+##TBD: better to use probability than fc (but be aware of speed)
+##TBD: add pseudocount to 0? Otherwise we are as good as only choosing SNVs with 0 counts (since it's very rare with a SNV read count of min_acount * fc)
+##This will then actually bias towards SNVs with lower expression,
+##which does not reflect actual ASE skewness. For example, if the
+##expression is only 3, then {3, 0} would be observed quite frequently
+##for a SNV with p = 0.5 (50-50 chance of expression). The genotype
+##calls across cells, will then follow a random distribution, probably
+##binomial. So, a truly biallelic SNV, where a random selection
+##appeared post-cdna amplification, would look monoallelic. This would
+##not effect the execution of current algorithm, and it would phase
+##the allele as if it was monoallelic. If on the other hand we would
+##be phasing per cell, I don't think it would phase such an
+##allele. Ok, there are scenarios where it wouldn't, but that's
+##irrelevant; the issue is that it's claimed to be monoallelic in the first place.
+
+##*###
+##nminmono critiera
+##*###
+##TBD: Actually, thinking about it, there should be information in a string completely monoallelic for the same allele as well.
+##TBD: Ask Bjorn about his thinking, since his criterion seems a bit wrong, as it would pass SNPs which only have biallelic calls.
+##TBD: do we currently filter vars where we require that mono in the
+same cell? if only looking per var and require a number of mono, then
+it might be that no other cell has a call within that cell.
+
+
+\section{Algorithms}
+Fact: There are 2 underlying states (classes)
+Goal: Determine which of the two classes a SNP belongs to.
+
+Algorithm 1
+Idea: Move SNPs from one class to the other until all SNPs are in one homogeneous class
+
+1) Discretize allele counts into genotypes, using e.g. 0.05<ase<0.95 as thresholds. Non-monoallelic calls are treated as missing values and ignored.
+2) Change a SNP's state-vector to its complementary state-vector
+3) Assess compactness among all SNPs (inversely related to variability) by measuring it among SNPs on each axis, where each axis corresponds to one cell, and then sum the axis-wise compactness scores.
+4) A SNP is moved if the total variability among all SNPs decrease upon changing a SNP to its complementary state-vector
+5) To start out changing SNPs belonging to the smallest cluster (this should avoid your repeat of running the same algorithm where you instead start out with the complementary state-vectors)
+a) Calculate proportion of 1:s, prop.1, for each SNP (assuming monoallelic calls in {0, 1})
+b) Calculate the proportion of SNPs with prop.1 >0.5
+c) If SNV.prop > 0.5 start out with SNPs with prop.1 <0.5, otherwise the other set of SNPs.
+
+The same would work also using more relaxed discretization thresholds, such as 0.4<ase<0.6, since r = 1 - a, causing the modes of the bimodal dist to be on either side of 0.5.
+Not using <0.5< avoids counts too close to 0.5 since reference biases exist. A danger with raising the threshold, is that it then becomes more severely affected by the by-chance possibility of allelic imbalance, which is especially strong for low read counts.
+
+Algorithm 2
+1) 2-class clustering (e.g. PAM) of SNPs (discretization not necessarily needed)
+2) For all SNPs belonging to one of the clusters, change to the complementary genotype.
+3) Special case if only 2 SNPs: Then change to complementary genotypes for one of the SNPs and check if variability decrease (as in Alg 1 above)
+
+Algorithm 3
+Idea: The discretization is subjected to false positive monoallelic calls due to that the genotype is a stochastic variable with an allele count distribution that depends on the expression level at a SNP.
+1) Calculate the probability of observing mono-allelic calls under a beta-binomial biallelic null hypothesis.
+2) Weigh each datapoint with 1-Prob obtained from step 1. 
+3) Apply Alg1 or Alg2, but including the weights.
+
+*Think about: do we really need several passes in alg 1?
+*Think about if the Hobohm2 algorithm might be applicable
+
+
+\section{Parameters}
+1) Number of cells (computational complexity, solubility)
+2) Read depth dist
+3) Drop-out rate / bursting
+4) Number of SNVs (computational complexity, solubility)
+5) Number of phasable genes
+
+2 and 3 should cause different widths (noise) of the clusters
+
+
+\section{INTRODUCTION}
+*Why phase:
+1) ``Importance of phasing'', can cite and write a sentence from one of those papers.
+2) Gene-based ASE analysis has greater power than variant-based. Most gene-based ASE algs only work on phased variant data. Sequencing a number of single cells may often be more feasible than sequencing the genome of parents.
+3) Phasing of X-chrom
+4) Probably not cover, but could be mentioned at the end of
+discussion: application to CNVs and aneuploidies.
+
+\section{RESULTS}
+*Report
+1) Success rate of phasing
+2) Whole chrX phasing
+3) Possibly complexity and some parameter dependencies, e.g. number of
+cells 
+4) Figure
+a) Outline
+b) Mouse control
+c) T-cells
+d) Possibly synthetic data, if want to explore the parameters mentioned above.
+
+
+\section{Some random misc text (intro/method)}
+An RNA sequence may be transcribed from one of the two diploid copies of a genome. The presence of SNPs can make these two sequences distinguishable. If cells are derived from the same individual or from individuals of identical genetic background, such as inbred mouse strains, then a SNP state-vector containing the called genotype in each cell, will also belong to one of two possible states. None, or very low expression levels in subsets of cells, perturbs the SNP-state vectors, similar to adding noise to a prototype vector representing the underlying haplotype sequence. 
+
+To phase SNPs, we identify which of the two haplotype states a SNP is most similar to. We identify the class a SNP belongs to by changing its state-vector to the complementary genotype, followed by assessing the change of the compactness (inversely related to the variance) among all SNPs. If a SNP is moved closer to the cluster containing most of the SNPs, then we retain the change. 
+
+We are doing an exhaustive search since the presence of missing values
+can cause non-optimal solutions if for example conducting a stepwise
+descent where one variant at a time is assessed (TBD: possibly put
+such an example in Supp).
+
+\section{Code style}
+Like Hadley Wickham (http://r-pkgs.had.co.nz/r.html#r) but with a few tweaks:
+1) Indentation. 4 spaces
+2) Assignment. Use = sign, apart from in function definitions.
+3) Spacing. Don't use spaces between control statements and parenthesis.
+4) Comments. For the default R indentiation in emacs, don't use space
+after a leading single hash. Use double-hashes.
