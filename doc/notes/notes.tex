@@ -1,13 +1,14 @@
 
 
 \section{TODO}
-##put on git
-##implement 2-class clustering algorithm
-##TODO: Allow genotype calls as an input option, instead of count matrices.
-##Error-checks
+##Implement 2-class clustering algorithm
+##Nulldist probability based algorithms
+##Allow genotype calls as an input option, instead of count matrices.
+##Error-checks (acset constructor). biallelic vars, data-frame, ...
 ##Test-suite (/tests)
+##Data
 ##Final output: provide actual haplotype: majority vote for each var in gt_phased
-##decide which, if any, fcns to make private
+##Decide which, if any, fcns to make private
 
 \section{Qs/TBDs}
 
@@ -34,7 +35,7 @@
 ##*###
 ##TBD: Actually, thinking about it, there should be information in a string completely monoallelic for the same allele as well.
 ##TBD: Ask Bjorn about his thinking, since his criterion seems a bit wrong, as it would pass SNPs which only have biallelic calls.
-##TBD: do we currently filter vars where we require that mono in the
+##TBD: Do we currently filter vars where we require that mono in the
 same cell? if only looking per var and require a number of mono, then
 it might be that no other cell has a call within that cell.
 
@@ -90,13 +91,17 @@ Idea: The discretization is subjected to false positive monoallelic calls due to
 3) Phasing of X-chrom
 4) Probably not cover, but could be mentioned at the end of
 discussion: application to CNVs and aneuploidies.
+5) Indicate differences between reference genome and phased
+genome. This could arise due to: a) possible erroronous phasing of
+the reference genome; b) the genotype you study differs with respect to
+the ref genome; c) the phasing of scphaser was wrong.
 
 \section{RESULTS}
 *Report
 1) Success rate of phasing
 2) Whole chrX phasing
 3) Possibly complexity and some parameter dependencies, e.g. number of
-cells 
+cells in terms of a ROC-curve using the mouse data.
 4) Figure
 a) Outline
 b) Mouse control
@@ -119,5 +124,5 @@ Like Hadley Wickham (http://r-pkgs.had.co.nz/r.html#r) but with a few tweaks:
 1) Indentation. 4 spaces
 2) Assignment. Use = sign, apart from in function definitions.
 3) Spacing. Don't use spaces between control statements and parenthesis.
-4) Comments. For the default R indentiation in emacs, don't use space
-after a leading single hash. Use double-hashes.
+4) Comments. For the default R indentation in emacs to work, don't use space
+after a leading single hash, but use double-hashes.
