@@ -1,53 +1,25 @@
 
 
 
-source('read_rpkmfiles.R')
-
 main <- function(){
-
-    ##*###
-    ##Read data
-    ##*###
-    fem.Tcell <- read_rpkmfiles("../../nogit/data/tcells/oct21/rpkmforgenes/allelichits/female_P1292_P1316_YFVNM_passedqc.fake_mouse_allelehits.txt")
-    fem.Tcell$c57.counts   <- fem.Tcell$counts[ , 1:(length(fem.Tcell$samples)/2)]
-    fem.Tcell$cast.counts  <- fem.Tcell$counts[ , (length(fem.Tcell$samples)/2+1):length(fem.Tcell$samples)]
-
-    ##feature data
-    featdata = as.data.frame(cbind(fem.Tcell[['genes']], fem.Tcell[['tx']]), stringsAsFactors = FALSE)
-    colnames(featdata) = c('feat', 'var')
-
-    ##phenodata
-    samples = fem.Tcell[['samples']]
-    samples = sub('_c57only$', '', samples[grep('_c57only$', samples)])
-    phenodata = as.data.frame(samples, stringsAsFactors = FALSE)
-    colnames(phenodata) = 'sample'
-    rownames(phenodata) = phenodata[, 'sample']
-
-    ##count matrixes
-    alt.counts = fem.Tcell[['c57.counts']]
-    rownames(alt.counts) = featdata[, 'var']
-    colnames(alt.counts) = samples
-    ref.counts = fem.Tcell[['cast.counts']]
-    rownames(ref.counts) = featdata[, 'var']
-    colnames(ref.counts) = samples
-
-    ##fix duplicates of variant names
-    pass.ind = which(!duplicated(featdata[, 'var']))
-    alt.counts = alt.counts[pass.ind, ]
-    ref.counts = ref.counts[pass.ind, ]
-    featdata = featdata[pass.ind, ]
-    rownames(featdata) = featdata[, 'var']
 
 
     ##*###
     ##Create data-structure
     ##*###
 
+    ##Data set provided
+    invisible(fakemouse)
+    featdata = fakemouse[['featdata']]
+    refcount = fakemouse[['refcount']]
+    altcount = fakemouse[['altcount']]
+    phenodata = fakemouse[['phenodata']]
+    
     ##acset, containing allelic counts and featdata for each allele (refcount, altcount)
-    acset = new_acset(featdata, ref.counts, alt.counts, phenodata)
+    acset = new_acset(featdata, refcount, altcount, phenodata)
     lapply(acset, dim)
 
-    ##Randomize counts, swapping half of the elements btw the ref and alt matrixes (used later)
+    ##Randomize original counts, before any filtering is done. This swaps half of the elements btw the ref and alt matrixes. The randomized dataset will be used below.
     acset_rnd = racset(acset)
     lapply(acset, dim)
 
@@ -101,11 +73,11 @@ main <- function(){
     ##gt concordance before and after phasing
     acset = set_gt_conc(acset)
 
-    ##concordance before and after phasing
+    ##print concordance before and after phasing
     acset$gt_conc$conc$feat2ncell
     acset$gt_phased_conc$conc$feat2ncell
 
-    ##inconcordance
+    ##print inconcordance
     acset$gt_conc$notconc$feat2ncell
     acset$gt_phased_conc$notconc$feat2ncell
 
@@ -123,11 +95,11 @@ main <- function(){
     ##gt concordance before and after phasing
     acset_rnd = set_gt_conc(acset_rnd)    
     
-    ##concordance before and after phasing
+    ##print concordance before and after phasing
     acset_rnd$gt_conc$conc$feat2ncell
     acset_rnd$gt_phased_conc$conc$feat2ncell
 
-    ##inconcordance after phasing
+    ##print inconcordance after phasing
     acset_rnd$gt_conc$notconc$feat2ncell
     acset_rnd$gt_phased_conc$notconc$feat2ncell
 
@@ -192,7 +164,7 @@ racset <- function(acset){
 
     ##swap half of the elements in the count matrices
     nels = length(altcount)
-    swap.ind = sample(1:nels, size = nels / 2)
+    swap.ind = sample(1:nels, size = floor(nels / 2))
     
     altcount_swapped = altcount
     refcount_swapped = refcount
@@ -468,9 +440,11 @@ new_acset <- function(featdata, refcount, altcount, phenodata = NA){
     acset = list(featdata = featdata, phenodata = phenodata, refcount = refcount, altcount = altcount)
 
     ##TODO: errorcheck that input featdata and phenodata are dataframes
+    ##TODO: check that refcount and altcount are matrixes
+    ##TODO: check that refcount and altcount have rownames and colnames are not NULL
     ##TODO: errorcheck featdata rownames identical to count matrixes rownames
     ##TODO: errorcheck phenodata rownames identical to count matrixes colnames
-
+    
     return(acset)
 }
 
