@@ -1,13 +1,3 @@
----
-title: "Tutorial for phasing of variants with scphaser"
-author: "Daniel Edsgärd and Björn Reinius"
-date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
-vignette: >
-  %\VignetteIndexEntry{Tutorial for phasing of variants with scphaser}
-  %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
----
 ##Create data-structure
 Create an "acset" data-structure. An acset is a list that at a minimum contains four data-structures:
 
