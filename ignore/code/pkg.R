@@ -25,10 +25,8 @@ main <- function(){
     devtools::use_vignette("scphaser")
     devtools::use_data_raw() ##creates data-raw dir containing code for parsing and storing data and adds that dir to .Rbuildignore
     
-    ##Ignore dir
-    devtools::use_build_ignore("doc")    
-    devtools::use_build_ignore("code")
-    devtools::use_build_ignore("res")
+    ##Ignore dirs
+    devtools::use_build_ignore("ignore")    
 
     
     ##*###
@@ -58,11 +56,11 @@ main <- function(){
     ##scphaser vignette
     ##*##
     ##spin
-    knitr::spin('code/vignettes/scphaser.R', knit = FALSE)    
+    knitr::spin('ignore/code/vignettes/scphaser.R', knit = FALSE)    
     
     ##add meta header
-    file.copy('code/vignettes/meta.Rmd', 'vignettes/meta.Rmd')
-    file.append('vignettes/meta.Rmd', 'code/vignettes/scphaser.Rmd')
+    file.copy('ignore/code/vignettes/meta.Rmd', 'vignettes/meta.Rmd')
+    file.append('vignettes/meta.Rmd', 'ignore/code/vignettes/scphaser.Rmd')
     file.rename('vignettes/meta.Rmd', 'vignettes/scphaser.Rmd')
 
     ##knit

@@ -10,6 +10,7 @@ As part of this package a dataset with synthetic allele counts are provided, cal
 
 ```{r }
 ##Extract data-structures from the fakemouse list
+library('scphaser')
 invisible(fakemouse)
 featdata = fakemouse[['featdata']]
 refcount = fakemouse[['refcount']]

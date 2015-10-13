@@ -278,28 +278,6 @@ get_compactness <- function(gt){
     return(compactness)
 }
 
-get_initial_gt <- function(acset){
-###We want to start with the matrix which induce an increase in the compactness score
-###TBD: Don't think I'm actually doing something sensible here! Because, if the number of ref monoallelic calls are greater why can't we just as well start with that?!
-    
-    ##Calculate the fraction of alternative monoallelic calls, for each SNP
-    n_samples = ncol(jfeat_gt)
-    var2fracalt = rowSums(jfeat_gt == 2) / n_samples
-
-    ##Calculate the fraction of SNPs with var2fracalt >0.5
-    n_vars = nrow(jfeat_gt)
-    frac_vars = length(which(var2fracalt > 0.5)) / n_vars
-    
-    ##If frac_vars > 0.5 start out with SNPs with var2fracalt < 0.5, otherwise the other set of SNPs.
-    if(frac_vars > 0.5){
-        jfeat_gt_phased = jfeat_gt
-    }else{
-        jfeat_gt_phased = jfeat_gt_comple
-    }
-
-    return(jfeat_gt_phased)
-}
-
 filter_nminmono <- function(acset, nminmono = 1){
 ###filter variants having less than nminmono mono-allelic calls of each allele across samples
     
@@ -446,63 +424,4 @@ compl_gt <- function(gt){
     gt_compl[which(gt == 2)] = 0
 
     return(gt_compl)
-}
-
-check <- function(){
-
-    ##*###
-    ##Test: randomized matrix results differ in concordance after phasing compared to the original
-    ##*###
-
-    gt = acset[['gt']]
-    gt.rnd = acset_rnd[['gt']]
-
-    which(gt != gt.rnd)
-    ##empty.. but, it should differ.
-
-    ##test that randomized allele count mat differs from the input
-    altcount = acset[['altcount']]
-    altcount.rnd = acset_rnd[['altcount']]
-    which(altcount != altcount.rnd)
-    ##empty, but should diff.
-
-    refcount = acset[['refcount']]
-    refcount.rnd = acset_rnd[['refcount']]
-    which(refcount != refcount.rnd)
-
-    
-    ##*###
-    ##DEBUG: identical concordance before and after phas
-    ##*###
-    gt = acset[['gt']]
-    gt_phased = acset[['gt_phased']]
-
-    featdata = acset[['featdata']]
-    jgene = 'APMAP'
-    vars = featdata[which(featdata[, 'feat'] == jgene), 'var']
-    
-    gt = gt[vars, ]
-    gt = gt_phased[vars, ]
-
-    var_pass = vars
-    
-    ##make two matrixes, corresponding to each of the two vars
-    nvar = length(var_pass)
-    s1_ind = seq(1, nvar-1, by = 2)
-    s2_ind = setdiff(1:nvar, s1_ind)
-    gt_s1 = gt[s1_ind, ]
-    gt_s2 = gt[s2_ind, ]    
-    
-    ##get elements that have monoallelic calls in both variants
-    mono_inds = which((gt_s1 == 0 | gt_s1 == 2) & (gt_s2 == 0 | gt_s2 == 2))
-
-    ##elements where monoallelic genotypes are concordant
-    conc_inds = mono_inds[gt_s1[mono_inds] == gt_s2[mono_inds]]
-    notconc_inds = setdiff(mono_inds, conc_inds)
-
-    ##feat2cell concordance matrix and feat2ncell counts of concordant gts
-    samples = colnames(gt_s1)
-    conc = get_conc(feat_pass, samples, conc_inds)
-    notconc = get_conc(feat_pass, samples, notconc_inds)
-    
 }

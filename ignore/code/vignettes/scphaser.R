@@ -14,6 +14,7 @@
 ##' As part of this package a dataset with synthetic allele counts are provided, called "fakemouse". The dataset is a list containing the four required data-structures to create an "acset".
 ##+
 ##Extract data-structures from the fakemouse list
+library('scphaser')
 invisible(fakemouse)
 featdata = fakemouse[['featdata']]
 refcount = fakemouse[['refcount']]
