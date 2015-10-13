@@ -32,7 +32,7 @@ main <- function(){
 
     
     ##*###
-    ##Workflow
+    ##Test
     ##*###
     devtools::load_all()
     devtools::test()
@@ -44,7 +44,7 @@ main <- function(){
     ##*##############
 
     ##*##
-    ##Test
+    ##Test vignette
     ##*##
     ##spin
     knitr::spin('code/vignettes/test.R', knit = FALSE)    
@@ -55,7 +55,7 @@ main <- function(){
     file.rename('vignettes/meta.Rmd', 'vignettes/test.Rmd')
 
     ##*##
-    ##scphaser
+    ##scphaser vignette
     ##*##
     ##spin
     knitr::spin('code/vignettes/scphaser.R', knit = FALSE)    

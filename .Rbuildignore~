@@ -1,4 +1,6 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
+^doc$
 ^data-raw$
-^ignore$
+^code$
+^res$
