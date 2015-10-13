@@ -1,5 +1,28 @@
 
+gtsynth_acset <- function(nvars, nalt_ofvars, ncells, notherhaplo_ofcells, percnoise = 0){
+##synthesize genotype matrix and construct acset
 
+    ##haplotypes
+    paternal = sample(c(rep(0, nvars - nalt_ofvars), rep(2, nalt_ofvars)))
+    maternal = compl_gt(paternal)
+
+    ##create gt matrix
+    gt_pat = as.matrix(as.data.frame(rep(list(paternal), ncells - notherhaplo_ofcells)))
+    gt_mat = as.matrix(as.data.frame(rep(list(maternal), notherhaplo_ofcells)))
+    gt = cbind(gt_pat, gt_mat)
+    gt = gt[, sample(1:ncells)]
+    vars = 1:nrow(gt)
+    colnames(gt) = 1:ncells
+    rownames(gt) = vars
+
+    ##featdata
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    
+    ##create acset
+    acset = new_acset(featdata, gt = gt)
+
+    return(acset)    
+}
 
 plot_conc <- function(acset, feats = NA, cex = 0.5){
 
