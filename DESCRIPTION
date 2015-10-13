@@ -10,7 +10,10 @@ BugReports: https://github.com/edajeda/scphaser/issues
 Depends: R (>= 3.2.2)
 License: GPL-3
 LazyData: true
-Suggests: testthat,
+Imports:
+    cluster
+Suggests:
+    testthat,
     knitr,
     rmarkdown
 VignetteBuilder: knitr

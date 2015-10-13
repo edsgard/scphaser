@@ -130,9 +130,6 @@ get_concmat <- function(feats, samples, inds){
 }
 
 phase <- function(acset, nvars_max = Inf){
-###calculate a "compactness" score (inversely related to variance) along each cell-axis, and sum up along all cell-axis
-###this gives a measure of the compactness of the distribution of all variants in the n-cell space
-###our aim is to maximize this compactness        
     
     ##feat2vars
     featdata = acset[['featdata']]
@@ -146,20 +143,22 @@ phase <- function(acset, nvars_max = Inf){
     feats = names(feat2var_list)
     nfeats = length(feats)
     cat('Phasing...\n')
-    progbar = txtProgressBar(min = 0, max = nfeats, style = 3)
+    ##progbar = txtProgressBar(min = 0, max = nfeats, style = 3)
     for(jfeat_it in 1:nfeats){
 
         jfeat = feats[jfeat_it]
         vars = feat2var_list[[jfeat]]
         nvars = length(vars)        
         
-        ##compactness for all possible combinations of flipped vars
         if(nvars <= nvars_max){
+            ##compactness for all possible combinations of flipped vars
             vars2flip = phase_exhaustive(acset, vars)
-            varflip[vars2flip] = TRUE
+        }else{
+            ##2-class clustering
+            vars2flip = phase_cluster(acsest, vars)
         }
-        
-        setTxtProgressBar(progbar, jfeat_it)
+        varflip[vars2flip] = TRUE        
+        ##setTxtProgressBar(progbar, jfeat_it)
     }
     ##add newline
     cat('\n')
@@ -173,9 +172,38 @@ phase <- function(acset, nvars_max = Inf){
     return(acset)
 }
 
-phase_exhaustive <- function(acset, vars){
+phase_cluster <- function(acset, vars){
 
-    ##get genotype matrix for jfeat
+    ##get genotype matrix for vars
+    jfeat_gt = acset[['gt']][vars, ]
+    jfeat_gt_compl = acset[['gt_compl']][vars, ]
+    
+    ##cluster
+    cluster_ind = cluster::pam(jfeat_gt, k = 2, diss = FALSE, metric = 'euclidean', cluster.only = TRUE)
+
+    ##flip vars belonging to one of the clusters
+    vars2flip = vars[which(cluster_ind == 2)]
+    gt_jvarflip = jfeat_gt
+    gt_jvarflip[vars2flip, ] = jfeat_gt_compl[vars2flip, ]
+
+    ##if the flip caused an increase of compactness then return vars2flip
+    flipped_compactness = get_compactness(gt_jvarflip)
+    noflip_compactness = get_compactness(jfeat_gt)
+    if(flipped_compactness > noflip_compactness){
+        vars2flip = vars2flip
+    }else{
+        vars2flip = character(0)
+    }
+    
+    return(vars2flip)
+}
+
+phase_exhaustive <- function(acset, vars){
+###calculate a "compactness" score (inversely related to variance) along each cell-axis, and sum up along all cell-axis
+###this gives a measure of the compactness of the distribution of all variants in the n-cell space
+###our aim is to maximize this compactness        
+
+    ##get genotype matrix for vars
     jfeat_gt = acset[['gt']][vars, ]
     jfeat_gt_compl = acset[['gt_compl']][vars, ]
     
@@ -288,20 +316,30 @@ filter_nminmono <- function(acset, nminmono = 1){
     return(acset)
 }
 
-new_acset <- function(featdata, refcount, altcount, phenodata = NA){
-
+new_acset <- function(featdata, refcount = NA, altcount = NA, phenodata = NA, gt = NA){
+    
     ##set phenodata
     if(is.logical(phenodata)){
-        samples = colnames(refcount)
+        if(is.logical(gt)){
+            samples = colnames(refcount)
+        }else{
+            samples = colnames(gt)
+        }
         phenodata = as.data.frame(samples, stringsAsFactors = FALSE)
         colnames(phenodata) = 'sample'
         rownames(phenodata) = phenodata[, 'sample']
     }
 
     ##create data-structure
-    acset = list(featdata = featdata, phenodata = phenodata, refcount = refcount, altcount = altcount)
-
+    if(!is.logical(gt)){
+        acset = list(featdata = featdata, phenodata = phenodata, gt = gt)
+        acset = set_compl_gt(acset)
+    }else{    
+        acset = list(featdata = featdata, phenodata = phenodata, refcount = refcount, altcount = altcount)
+    }
+    
     ##TODO: errorcheck that input featdata and phenodata are dataframes
+    ##TODO: check that either refcount and altcount provided and not gt, OR, gt and none of the count matrices
     ##TODO: check that refcount and altcount are matrixes
     ##TODO: check that refcount and altcount have rownames and colnames are not NULL
     ##TODO: errorcheck featdata rownames identical to count matrixes rownames

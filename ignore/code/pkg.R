@@ -10,7 +10,11 @@ main <- function(){
     devtools::install_github("hadley/devtools")
     install.packages("rmarkdown")
     ##pandoc: http://pandoc.org/installing.html
-
+    ##after basictex installation:
+    ##sudo tlmgr update --self
+    ##sudo tlmgr install collection-fontsrecommended
+    ##sudo tlmgr install inconsolata
+    
     ##check devtools installation (restart R if you just installed it)
     library('devtools')
     has_devel()
@@ -35,6 +39,12 @@ main <- function(){
     devtools::load_all()
     devtools::test()
     devtools::check()
+
+
+    ##*###
+    ##Documentation and namespace
+    ##*###
+    devtools::document()
 
     
     ##*##############
