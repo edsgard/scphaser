@@ -3,18 +3,23 @@
 \section{TODO}
 ##Real mouse data
 ##Test TPR and FPR on real mouse data
-##Nulldist probability based algorithms
+##write test: set_aseweights
+##weighted version of phase_exhaustive: wphase_exhaustive
+##weighted clustering: wcKMedoids
+##synth_acset (allele counts)
+##filter feats where all counts are zero in all its vars and cells
+##Quality of phasing for each gene. Possibly can use the
+probabilities, otherwise calculate the prob that we get the same
+degree of phasing using randomized data.
 ##Error-checks (acset constructor). biallelic vars, data-frame, ...
 ##Expand test-suite (/tests)
 ##tcell data
 ##Document fcns: /man
-##namespace
-##Final output: provide actual haplotype: simply in varflip (0
-corresponding to ref, 1 to alt)
-##Decide which, if any, fcns to make private
+##namespace: which fcns to export
+##Final output: provide actual haplotype: simply in varflip (0 corresponding to ref, 1 to alt)
 ##Lintr check
 ##Add Travis
-##devtools::install_github("hadley/devtools")
+##Readme.md: devtools::install_github("edajeda/scphaser")
 ##Use checkpoint package if including any dependencies
 
 \section{Qs/TBDs}
@@ -69,7 +74,9 @@ Not using <0.5< avoids counts too close to 0.5 since reference biases exist. A d
 Algorithm 2
 1) 2-class clustering (e.g. PAM) of SNPs (discretization not necessarily needed)
 2) For all SNPs belonging to one of the clusters, change to the complementary genotype.
-3) Special case if only 2 SNPs: Then change to complementary genotypes for one of the SNPs and check if variability decrease (as in Alg 1 above)
+3) Handling of special case if all variants already from the beginning belong to
+the same class: Calculate compactness without any
+change and compare with the compactness after clustering.
 
 Algorithm 3
 Idea: The discretization is subjected to false positive monoallelic calls due to that the genotype is a stochastic variable with an allele count distribution that depends on the expression level at a SNP.
