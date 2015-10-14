@@ -2,8 +2,28 @@
 
 check <- function(){
 
+
     ##*###
-    ##Test: randomized matrix results differ in concordance after phasing compared to the original
+    ##Test speed diff btw getting pval by binom.test or pbinom
+    ##*###
+    altcount = acset[['altcount']]
+    refcount = acset[['refcount']]
+    counts = cbind(as.integer(altcount), as.integer(refcount))
+
+    ##pbinom
+    s = proc.time()
+    weights = apply(head(counts, 1e6), 1, counts2weight)    
+    diff = proc.time() - s
+
+    ##binom.test
+    s = proc.time()
+    weights_test = apply(head(counts, 1e6), 1, counts2weight_test)    
+    testdiff = proc.time() - s
+    ##slower than counts2weight
+
+    
+    ##*###
+    ##Test: Randomized matrix results differ in concordance after phasing compared to the original
     ##*###
 
     gt = acset[['gt']]

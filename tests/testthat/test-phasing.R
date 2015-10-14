@@ -193,3 +193,220 @@ test_that('phase_exhaustive phases correctly', {
     ##*###
     
 })
+
+test_that('wphase_exhaustive phases correctly', {
+
+    ##*###
+    ##Half of the cells maternal, half paternal
+    ##*###
+
+    ##allele count matrixes
+    ncells = 10
+    ref = c(0, 10, 1, 5, 2, 9)
+    alt = c(0, 2, 5, 5, 6, 3)    
+    vars2flip_exp = as.integer(c(3, 5))
+    
+    refcount = as.matrix(as.data.frame(rep(list(ref, alt), ncells / 2)))
+    altcount = as.matrix(as.data.frame(rep(list(alt, ref), ncells / 2)))
+    
+    vars = 1:nrow(refcount)
+    samples = 1:ncells
+    colnames(refcount) = samples
+    rownames(refcount) = vars
+    colnames(altcount) = samples
+    rownames(altcount) = vars
+    
+    ##featdata
+    nvars = length(vars)
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    
+    ##create acset
+    acset = new_acset(featdata, altcount = altcount, refcount = refcount)
+
+    ##call genotype
+    min_acount = 3
+    fc = 3 #To avoid for example refmap biases. fc == 3 corresponds to 75/25 ratio. Some of the first with expression of both alleles are then: 3/1, 6/2, 9/3.
+    acset = call_gt(acset, min_acount, fc)
+    lapply(acset, dim)
+
+    ##set weights
+    acset = set_aseweights(acset)
+    
+    ##phase
+    vars2flip = wphase_exhaustive(acset, vars)
+
+    ##test
+    expect_identical(vars2flip, vars2flip_exp)
+
+    
+    ##*###
+    ##All cells of one and the same phase
+    ##*###
+    
+    ##allele count matrixes
+    ncells = 10
+    ref = c(0, 10, 1, 5, 2, 3)
+    alt = c(0, 3, 1, 5, 2, 9)    
+    vars2flip_exp = as.integer(2)
+    
+    refcount = as.matrix(as.data.frame(rep(list(ref), ncells)))
+    altcount = as.matrix(as.data.frame(rep(list(alt), ncells)))
+    
+    vars = 1:nrow(refcount)
+    samples = 1:ncells
+    colnames(refcount) = samples
+    rownames(refcount) = vars
+    colnames(altcount) = samples
+    rownames(altcount) = vars
+    
+    ##featdata
+    nvars = length(vars)
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    
+    ##create acset
+    acset = new_acset(featdata, altcount = altcount, refcount = refcount)
+
+    ##call genotype
+    min_acount = 3
+    fc = 3 #To avoid for example refmap biases. fc == 3 corresponds to 75/25 ratio. Some of the first with expression of both alleles are then: 3/1, 6/2, 9/3.
+    acset = call_gt(acset, min_acount, fc)
+    lapply(acset, dim)
+
+    ##set weights
+    acset = set_aseweights(acset)
+
+    ##phase
+    vars2flip = wphase_exhaustive(acset, vars)
+
+    ##test
+    expect_identical(vars2flip, vars2flip_exp)
+    
+
+    ##*###
+    ##Pre-phased (matrix with identical values)
+    ##*###
+
+    ##allele count matrixes
+    ncells = 10
+    ref = c(0, 10, 1, 5, 2, 9)
+    alt = c(0, 3, 1, 5, 2, 3)    
+    vars2flip_exp = integer(0)
+    
+    refcount = as.matrix(as.data.frame(rep(list(ref), ncells)))
+    altcount = as.matrix(as.data.frame(rep(list(alt), ncells)))
+    
+    vars = 1:nrow(refcount)
+    samples = 1:ncells
+    colnames(refcount) = samples
+    rownames(refcount) = vars
+    colnames(altcount) = samples
+    rownames(altcount) = vars
+    
+    ##featdata
+    nvars = length(vars)
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    
+    ##create acset
+    acset = new_acset(featdata, altcount = altcount, refcount = refcount)
+
+    ##call genotype
+    min_acount = 3
+    fc = 3 #To avoid for example refmap biases. fc == 3 corresponds to 75/25 ratio. Some of the first with expression of both alleles are then: 3/1, 6/2, 9/3.
+    acset = call_gt(acset, min_acount, fc)
+    lapply(acset, dim)
+
+    ##set weights
+    acset = set_aseweights(acset)
+  
+    ##phase
+    vars2flip = wphase_exhaustive(acset, vars)
+
+    ##test
+    expect_identical(vars2flip, vars2flip_exp)
+    
+    
+    ##*###
+    ##Test if weights affect if var should be flipped or not
+    ##*###
+
+    ##Weigh the difference heavy, such that a flip should take place
+    
+    ##allele count matrixes
+    refcount = matrix(c(0, 100, 10, 3), nrow = 2)
+    altcount = matrix(c(10, 0, 0, 0), nrow = 2)
+    vars2flip_exp = as.integer(1)
+    
+    ncells = ncol(refcount)
+    vars = 1:nrow(refcount)
+    samples = 1:ncells
+    colnames(refcount) = samples
+    rownames(refcount) = vars
+    colnames(altcount) = samples
+    rownames(altcount) = vars
+    
+    ##featdata
+    nvars = length(vars)
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    
+    ##create acset
+    acset = new_acset(featdata, altcount = altcount, refcount = refcount)
+
+    ##call genotype
+    min_acount = 3
+    fc = 3 #To avoid for example refmap biases. fc == 3 corresponds to 75/25 ratio. Some of the first with expression of both alleles are then: 3/1, 6/2, 9/3.
+    acset = call_gt(acset, min_acount, fc)
+    lapply(acset, dim)
+
+    ##set weights
+    acset = set_aseweights(acset)
+  
+    ##phase
+    vars2flip = wphase_exhaustive(acset, vars)
+
+    ##test
+    expect_identical(vars2flip, vars2flip_exp)
+
+    
+    ##*###
+    ##Test if weights affect if var should be flipped or not
+    ##*###
+
+    ##Weigh the equal gt heavy, such that no flip should take place
+    
+    ##allele count matrixes
+    refcount = matrix(c(0, 3, 10, 100), nrow = 2)
+    altcount = matrix(c(10, 0, 0, 0), nrow = 2)
+    vars2flip_exp = as.integer()
+    
+    ncells = ncol(refcount)
+    vars = 1:nrow(refcount)
+    samples = 1:ncells
+    colnames(refcount) = samples
+    rownames(refcount) = vars
+    colnames(altcount) = samples
+    rownames(altcount) = vars
+    
+    ##featdata
+    nvars = length(vars)
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    
+    ##create acset
+    acset = new_acset(featdata, altcount = altcount, refcount = refcount)
+
+    ##call genotype
+    min_acount = 3
+    fc = 3 #To avoid for example refmap biases. fc == 3 corresponds to 75/25 ratio. Some of the first with expression of both alleles are then: 3/1, 6/2, 9/3.
+    acset = call_gt(acset, min_acount, fc)
+    lapply(acset, dim)
+
+    ##set weights
+    acset = set_aseweights(acset)
+  
+    ##phase
+    vars2flip = wphase_exhaustive(acset, vars)
+
+    ##test
+    expect_identical(vars2flip, vars2flip_exp)
+
+    
+})

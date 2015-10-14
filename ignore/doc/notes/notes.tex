@@ -3,14 +3,10 @@
 \section{TODO}
 ##Real mouse data
 ##Test TPR and FPR on real mouse data
-##write test: set_aseweights
-##weighted version of phase_exhaustive: wphase_exhaustive
-##weighted clustering: wcKMedoids
+##weighted version of phase_clustering: wcKMedoids or weighted dist matrix.
 ##synth_acset (allele counts)
 ##filter feats where all counts are zero in all its vars and cells
-##Quality of phasing for each gene. Possibly can use the
-probabilities, otherwise calculate the prob that we get the same
-degree of phasing using randomized data.
+##Quality of phasing for each gene. 
 ##Error-checks (acset constructor). biallelic vars, data-frame, ...
 ##Expand test-suite (/tests)
 ##tcell data
@@ -23,6 +19,18 @@ degree of phasing using randomized data.
 ##Use checkpoint package if including any dependencies
 
 \section{Qs/TBDs}
+
+##*###
+##weighing
+##*###
+##Clustering: can probably weigh every element in a distance matrix calculation
+##otherwise, probably use wcKMedoids where w_jvar = P_jvar / sum(P_jvar) and P_jvar = sum(log(P))
+
+##*###
+##gene phasing reliability score
+##*###
+##possibly meta-analysis of jvar p-values (similar to geneiase). But this is basically a measure that not biallelic.
+##otherwise calculate the prob that we get the same degree of phasing using randomized data.
 
 ##*###
 ##call_gt

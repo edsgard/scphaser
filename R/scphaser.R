@@ -5,15 +5,21 @@ set_aseweights <- function(acset, p = 0.5){
     altcount = acset[['altcount']]
     refcount = acset[['refcount']]
 
+    ##matrix -> vec for fast calculation
     counts = cbind(as.integer(altcount), as.integer(refcount))
+    counts = as.data.frame(counts)
 
-    ##TBD: slow, so either filter, optimize or parallelize
-    weights = apply(counts, 1, counts2weight)
+    ##set weight to 0 if altcount == refcount
+    weights = rep(0, nrow(counts))
+    diff.ind = which(counts[, 1] != counts[, 2])
+
+    ##calculate weight as 1 - two.sided p-value
+    weights[diff.ind] = apply(counts[diff.ind, ], 1, counts2weight)
 
     ##vec -> matrix
     weights = matrix(weights, nrow = nrow(altcount))
     rownames(weights) = rownames(altcount)
-    colnames(wights) = colnames(altcount)
+    colnames(weights) = colnames(altcount)
     
     ##store
     acset[['weights']] = weights
@@ -21,11 +27,16 @@ set_aseweights <- function(acset, p = 0.5){
     return(acset)
 }
 
-counts2weight <- function(altcount, refcount, p = 0.5){
-
-  weight = 1 - binom.test(altcount, altcount + refcount, p, alternative = 'two.sided')$p.value
-
-  return(weight)
+counts2weight <- function(counts, p = 0.5){
+###1 - (two-sided p-value)
+###Using pbinom is faster than binom.test (weight = 1 - binom.test(counts[1], sum(counts), p, alternative = 'two.sided')$p.value)
+    
+    if(counts[1] == counts[2]){
+        weight = 0
+    }else{
+        weight = 1 - 2 * pbinom(min(counts), sum(counts), p)
+    }
+    return(weight)
 }
 
 phase <- function(acset, nvars_max = Inf){
@@ -54,7 +65,7 @@ phase <- function(acset, nvars_max = Inf){
             vars2flip = phase_exhaustive(acset, vars)
         }else{
             ##2-class clustering
-            vars2flip = phase_cluster(acsest, vars)
+            vars2flip = phase_cluster(acset, vars)
         }
         varflip[vars2flip] = TRUE        
         ##setTxtProgressBar(progbar, jfeat_it)
@@ -135,6 +146,45 @@ phase_exhaustive <- function(acset, vars){
     return(vars2flip)    
 }
 
+wphase_exhaustive <- function(acset, vars){
+###calculate a "compactness" score (inversely related to variance) along each cell-axis, and sum up along all cell-axis
+###this gives a measure of the compactness of the distribution of all variants in the n-cell space
+###our aim is to maximize this compactness        
+
+    ##get genotype and weight matrix for vars
+    jfeat_gt = acset[['gt']][vars, ]
+    jfeat_gt_compl = acset[['gt_compl']][vars, ]
+    weights = acset[['weights']][vars, ]
+    
+    ##create matrix exhausting all possible combinations of flips
+    nvars = length(vars)
+    flipcombs = as.matrix(expand.grid(rep(list(c(0, 1)), nvars)))
+
+    ##exclude flipping of all vars since identical results to no change (always last row)
+    flipcombs = flipcombs[1:(nrow(flipcombs) - 1), ]
+
+    ##flip a set of variants and calculate compactness
+    nflips = nrow(flipcombs)
+    flipped_compactness = rep(-1, nflips)
+    for(jflip in 1:nflips){
+
+        ##reset gt
+        gt_jvarflip = jfeat_gt
+        
+        ##flip vars2flip to complementary gt
+        vars2flip = vars[which(flipcombs[jflip, ] == 1)]
+        gt_jvarflip[vars2flip, ] = jfeat_gt_compl[vars2flip, ]
+        
+        ##weighted compactness of genotype matrix with vars flipped to complementary gt
+        flipped_compactness[jflip] = get_wcompactness(gt_jvarflip, weights)            
+    }
+
+    ##get the combination of vars to flip that achieved maximum compactness
+    vars2flip = vars[which(flipcombs[which.max(flipped_compactness), ] == 1)]
+
+    return(vars2flip)    
+}
+
 phase_singlevarflip <- function(acset){
 ###TODO: if one wants this to work one needs to update gt_phased within the jvar flip-loop each time the compactness increase.
     
@@ -201,6 +251,25 @@ phase_singlevarflip <- function(acset){
 get_compactness <- function(gt){
     ##TBD: this also counts elements where only a monoallelic call in a single var. Should be ok, since that number is invariant to a complement shift.
     compactness = sum(abs(colSums(gt == 0, na.rm = TRUE) - colSums(gt == 2, na.rm = TRUE)))
+
+    return(compactness)
+}
+
+get_wcompactness <- function(gt, weights){
+###weighted compactness
+
+    nvars = nrow(gt)
+    nsamples = ncol(gt)
+    
+    ref_mat = matrix(0, nrow = nvars, ncol = nsamples)    
+    ref_ind = which(gt == 0)
+    ref_mat[ref_ind] = weights[ref_ind]
+    
+    alt_mat = matrix(0, nrow = nvars, ncol = nsamples)
+    alt_ind = which(gt == 2)
+    alt_mat[alt_ind] = weights[alt_ind]
+    
+    compactness = sum(abs(colSums(ref_mat) - colSums(alt_mat)))
 
     return(compactness)
 }
