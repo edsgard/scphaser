@@ -62,10 +62,10 @@ phase <- function(acset, nvars_max = Inf){
         
         if(nvars <= nvars_max){
             ##compactness for all possible combinations of flipped vars
-            vars2flip = phase_exhaustive(acset, vars)
+            vars2flip = phase_exhaust_gt(acset, vars)
         }else{
             ##2-class clustering
-            vars2flip = phase_cluster(acset, vars)
+            vars2flip = phase_cluster_gt(acset, vars)
         }
         varflip[vars2flip] = TRUE        
         ##setTxtProgressBar(progbar, jfeat_it)
@@ -82,7 +82,7 @@ phase <- function(acset, nvars_max = Inf){
     return(acset)
 }
 
-phase_cluster <- function(acset, vars){
+phase_cluster_gt <- function(acset, vars){
 
     ##get genotype matrix for vars
     jfeat_gt = acset[['gt']][vars, ]
@@ -160,6 +160,51 @@ wphase_cluster_gt <- function(acset, vars){
     return(vars2flip)
 }
 
+phase_cluster_ase <- function(acset, vars){
+    
+    ##get data-structures
+    acset = subset_rows(acset, vars)
+    altcount = acset[['altcount']]
+    refcount = acset[['refcount']]
+
+    ##ase
+    totcount = altcount + refcount
+    ase = (altcount) / totcount
+
+    ##the distance need to be increased if NAs. Treat it the same as biallelic.
+    ##handles 0/0 division where both alt and ref counts are 0.
+    ase[is.na(ase)] = 0.5        
+    
+    ##calculate distance matrix between pairs of variants
+    var_dist = dist(ase, method = 'euclidean')
+    
+    ##cluster
+    cluster_ind = cluster::pam(var_dist, k = 2, diss = TRUE, cluster.only = TRUE)
+
+    ##flip vars belonging to one of the clusters
+    vars2flip = vars[which(cluster_ind == 2)]
+
+    ##if the flip caused a decrease in variability then return vars2flip
+    ##flip 
+    ase_jvarflip = ase
+    ase_compl = 1 - ase
+    ase_jvarflip[vars2flip, ] = ase_compl[vars2flip, ]
+    
+    ##variability
+    ##flipped_cv = get_cv_ase(ase_jvarflip)
+    ##noflip_cv = get_cv_ase(ase)
+    flipped_cv = get_var_ase(ase_jvarflip)
+    noflip_cv = get_var_ase(ase)
+
+    if(flipped_cv < noflip_cv){
+        vars2flip = vars2flip
+    }else{
+        vars2flip = character(0)
+    }
+    
+    return(vars2flip)
+}
+
 wphase_cluster_ase <- function(acset, vars){
     
     ##get data-structures
@@ -209,8 +254,10 @@ wphase_cluster_ase <- function(acset, vars){
     
     ##variability
     weights = totcount
-    flipped_cv = get_wcv_ase(ase_jvarflip, weights)
-    noflip_cv = get_wcv_ase(ase, weights)
+    ##flipped_cv = get_wcv_ase(ase_jvarflip, weights)
+    ##noflip_cv = get_wcv_ase(ase, weights)
+    flipped_cv = get_wvar_ase(ase_jvarflip, weights)
+    noflip_cv = get_wvar_ase(ase, weights)    
     if(flipped_cv < noflip_cv){
         vars2flip = vars2flip
     }else{
@@ -220,7 +267,7 @@ wphase_cluster_ase <- function(acset, vars){
     return(vars2flip)
 }
 
-phase_exhaustive <- function(acset, vars){
+phase_exhaust_gt <- function(acset, vars){
 ###calculate a "compactness" score (inversely related to variance) along each cell-axis, and sum up along all cell-axis
 ###this gives a measure of the compactness of the distribution of all variants in the n-cell space
 ###our aim is to maximize this compactness        
@@ -258,7 +305,7 @@ phase_exhaustive <- function(acset, vars){
     return(vars2flip)    
 }
 
-wphase_exhaustive <- function(acset, vars){
+wphase_exhaust_gt <- function(acset, vars){
 ###calculate a "compactness" score (inversely related to variance) along each cell-axis, and sum up along all cell-axis
 ###this gives a measure of the compactness of the distribution of all variants in the n-cell space
 ###our aim is to maximize this compactness        
@@ -295,6 +342,102 @@ wphase_exhaustive <- function(acset, vars){
     vars2flip = vars[which(flipcombs[which.max(flipped_compactness), ] == 1)]
 
     return(vars2flip)    
+}
+
+phase_exhaust_ase <- function(acset, vars){
+
+    ##get data-structures
+    acset = subset_rows(acset, vars)
+    altcount = acset[['altcount']]
+    refcount = acset[['refcount']]
+
+    ##ase
+    totcount = altcount + refcount
+    ase = altcount / totcount
+
+    ##the distance need to be increased if NAs. Treat it the same as biallelic.
+    ##handles 0/0 division where both alt and ref counts are 0.
+    ase[is.na(ase)] = 0.5        
+
+    ##complement
+    ase_compl = 1 - ase
+    
+    ##create matrix exhausting all possible combinations of flips
+    nvars = length(vars)
+    flipcombs = as.matrix(expand.grid(rep(list(c(0, 1)), nvars)))
+
+    ##exclude flipping of all vars since identical results to no change (always last row)
+    flipcombs = flipcombs[1:(nrow(flipcombs) - 1), ]
+
+    ##flip a set of variants and calculate compactness
+    nflips = nrow(flipcombs)
+    flipped_cv = rep(Inf, nflips)
+    for(jflip in 1:nflips){
+
+        ##reset ase matrix
+        ase_jvarflip = ase
+        
+        ##flip vars2flip to complementary ase
+        vars2flip = vars[which(flipcombs[jflip, ] == 1)]
+        ase_jvarflip[vars2flip, ] = ase_compl[vars2flip, ]
+        
+        ##cv of ase matrix with vars flipped to complementary ase
+        ##flipped_cv[jflip] = get_cv_ase(ase_jvarflip)
+        flipped_cv[jflip] = get_var_ase(ase_jvarflip)
+    }
+
+    ##get the combination of vars to flip that achieved minimum cv
+    vars2flip = vars[which(flipcombs[which.min(flipped_cv), ] == 1)]
+
+    return(vars2flip)
+}
+
+wphase_exhaust_ase <- function(acset, vars){
+
+    ##get data-structures
+    acset = subset_rows(acset, vars)
+    altcount = acset[['altcount']]
+    refcount = acset[['refcount']]
+
+    ##ase
+    totcount = altcount + refcount
+    ase = altcount / totcount
+
+    ##the distance need to be increased if NAs. Treat it the same as biallelic.
+    ##handles 0/0 division where both alt and ref counts are 0.
+    ase[is.na(ase)] = 0.5        
+
+    ##complement
+    ase_compl = 1 - ase
+    
+    ##create matrix exhausting all possible combinations of flips
+    nvars = length(vars)
+    flipcombs = as.matrix(expand.grid(rep(list(c(0, 1)), nvars)))
+
+    ##exclude flipping of all vars since identical results to no change (always last row)
+    flipcombs = flipcombs[1:(nrow(flipcombs) - 1), ]
+
+    ##flip a set of variants and calculate compactness
+    nflips = nrow(flipcombs)
+    flipped_cv = rep(Inf, nflips)
+    for(jflip in 1:nflips){
+
+        ##reset ase matrix
+        ase_jvarflip = ase
+        
+        ##flip vars2flip to complementary ase
+        vars2flip = vars[which(flipcombs[jflip, ] == 1)]
+        ase_jvarflip[vars2flip, ] = ase_compl[vars2flip, ]
+        
+        ##cv of ase matrix with vars flipped to complementary ase
+        ##flipped_cv[jflip] = get_wcv_ase(ase_jvarflip, weights = totcount)
+        flipped_cv[jflip] = get_wvar_ase(ase_jvarflip, weights = totcount)
+    }
+
+    ##get the combination of vars to flip that achieved minimum cv
+    vars2flip = vars[which(flipcombs[which.min(flipped_cv), ] == 1)]
+
+    return(vars2flip)
 }
 
 phase_singlevarflip <- function(acset){
@@ -365,6 +508,29 @@ get_compactness <- function(gt){
     compactness = sum(abs(colSums(gt == 0, na.rm = TRUE) - colSums(gt == 2, na.rm = TRUE)))
 
     return(compactness)
+}
+
+get_var_ase <- function(ase){
+
+    ##sum the vars from every cell (assume cells are independent observations)
+    vartot = sum(apply(ase, 2, var))
+
+    return(vartot)
+}
+
+get_wvar_ase <- function(ase, weights){
+
+    ##sum the weighted vars from every cell (assume cells are independent observations)
+    ncells = ncol(ase)
+    vars = rep(NA, ncells)
+    for(jcell in 1:ncells){
+        jase = ase[, jcell]
+        jw = weights[, jcell]
+        vars[jcell] = Hmisc::wtd.var(jase, jw)
+    }
+    vartot = sum(vars)
+
+    return(vartot)
 }
 
 get_cv_ase <- function(ase){
@@ -441,7 +607,8 @@ new_acset <- function(featdata, refcount = NA, altcount = NA, phenodata = NA, gt
     }else{    
         acset = list(featdata = featdata, phenodata = phenodata, refcount = refcount, altcount = altcount)
     }
-    
+
+    ##errorcheck that featdata[, 'vars'] is character
     ##TODO: errorcheck that input featdata and phenodata are dataframes
     ##TODO: check that either refcount and altcount provided and not gt, OR, gt and none of the count matrices
     ##TODO: check that refcount and altcount are matrixes

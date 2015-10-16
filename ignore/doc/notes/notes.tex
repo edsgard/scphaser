@@ -3,19 +3,18 @@
 \section{TODO}
 ##Real mouse data
 ##Test TPR and FPR on real mouse data
-##weighted version of phase_clustering: wcKMedoids or weighted dist matrix.
 ##synth_acset (allele counts)
 ##filter feats where all counts are zero in all its vars and cells
 ##Quality of phasing for each gene. 
 ##Error-checks (acset constructor). biallelic vars, data-frame, ...
 ##Expand test-suite (/tests)
-##tcell data
+##rename fakemouse and colnames to tcell data
 ##Document fcns: /man
 ##namespace: which fcns to export
 ##Final output: provide actual haplotype: simply in varflip (0 corresponding to ref, 1 to alt)
 ##Lintr check
 ##Add Travis
-##Readme.md: devtools::install_github("edajeda/scphaser")
+##Readme.md: see pkg book for tips and add installation code: devtools::install_github("edajeda/scphaser")
 ##Use checkpoint package if including any dependencies
 
 \subsection{Lower prio}
@@ -36,6 +35,10 @@ phase_cluster using ase matrix instead of gt.
 ##possibly meta-analysis of jvar p-values (similar to geneiase). But
 this is basically a measure of not being biallelic.
 ##otherwise calculate the prob that we get the same degree of phasing using randomized data.
+##Possibly makes sense: Within-class (gene) variance where variants are observations. Compare
+against null-dist of within-gene variances, obtained by using randomized counts with similar properties
+(sampled from the same count-dist). Think about if such a p-value is
+proportional to sample-size (read counts and number of cells).
 
 ##*###
 ##call_gt
@@ -148,6 +151,9 @@ such an example in Supp).
 
 Possibly mention an example where weighing plays a role (see
 test-phasing.R for the minimal example).
+
+Three arguments that can be varied: {gt, ase}, {exhaust, cluster},
+{no-weights, weighted}. All eight combinations has been implemented.
 
 \section{Code style}
 Like Hadley Wickham (http://r-pkgs.had.co.nz/r.html#r) but with a few tweaks:
