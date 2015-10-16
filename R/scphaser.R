@@ -108,6 +108,118 @@ phase_cluster <- function(acset, vars){
     return(vars2flip)
 }
 
+wphase_cluster_gt <- function(acset, vars){
+    
+    ##get data-structures
+    acset = subset_rows(acset, vars)
+    jfeat_gt = acset[['gt']]
+    jfeat_gt_compl = acset[['gt_compl']]
+    altcount = acset[['altcount']]
+    refcount = acset[['refcount']]
+
+    ##the distance need to be increased if NAs. Treat it the same as biallelic.
+    jfeat_gt[which(is.na(jfeat_gt))] = 1
+    
+    ##calculate weighted pairwise distance matrix between variants
+    ##let weights for variant i, j in cell k correspond to w_ijk = sum(counts(2x2 table_ij)) / sum_k(2x2_ij tables)
+    nvars = length(vars)
+    distmat = matrix(NA, nrow = nvars, ncol = nvars)
+    for(jvar_it in 1:(nvars-1)){
+        for(kvar_it in (jvar_it + 1):nvars){
+
+            ##weights
+            jvars = c(jvar_it, kvar_it)
+            jvars_count = apply(altcount[jvars, ] + refcount[jvars, ], 2, sum, na.rm = TRUE)
+            weights = jvars_count / sum(jvars_count)
+
+            ##weighted Manhattan distance            
+            distmat[kvar_it, jvar_it] = sum(weights * abs(jfeat_gt[jvar_it, ] - jfeat_gt[kvar_it, ]))                
+        }
+    }
+    
+    ##cluster
+    cluster_ind = cluster::pam(as.dist(distmat), k = 2, diss = TRUE, cluster.only = TRUE)
+
+    ##flip vars belonging to one of the clusters
+    vars2flip = vars[which(cluster_ind == 2)]
+
+    ##if the flip caused an increase of compactness then return vars2flip
+    gt_jvarflip = jfeat_gt
+    gt_jvarflip[vars2flip, ] = jfeat_gt_compl[vars2flip, ]
+
+    ##compactness
+    weights = acset[['weights']]
+    flipped_compactness = get_wcompactness(gt_jvarflip, weights)
+    noflip_compactness = get_wcompactness(jfeat_gt, weights)
+    if(flipped_compactness > noflip_compactness){
+        vars2flip = vars2flip
+    }else{
+        vars2flip = character(0)
+    }
+    
+    return(vars2flip)
+}
+
+wphase_cluster_ase <- function(acset, vars){
+    
+    ##get data-structures
+    acset = subset_rows(acset, vars)
+    altcount = acset[['altcount']]
+    refcount = acset[['refcount']]
+
+    ##ase
+    totcount = altcount + refcount
+    ase = (altcount) / totcount
+
+    ##the distance need to be increased if NAs. Treat it the same as biallelic.
+    ##handles 0/0 division where both alt and ref counts are 0.
+    ase[is.na(ase)] = 0.5        
+    
+    ##calculate weighted pairwise distance matrix between variants
+    ##let weights for variant i, j in cell k correspond to w_ijk = sum(counts(2x2 table_ij)) / sum_k(2x2_ij tables)
+    nvars = length(vars)
+    distmat = matrix(NA, nrow = nvars, ncol = nvars)
+    for(jvar_it in 1:(nvars-1)){
+        for(kvar_it in (jvar_it + 1):nvars){
+
+            ##weights
+            jvars = c(jvar_it, kvar_it)
+            jvars_count = apply(altcount[jvars, ] + refcount[jvars, ], 2, sum, na.rm = TRUE)
+            weights = jvars_count / sum(jvars_count)
+
+            ##weighted distance
+            distmat[kvar_it, jvar_it] = sum(weights * abs(ase[jvar_it, ] - ase[kvar_it, ]))
+            
+            ##c = boot::corr(t(jfeat_ase[jvars, ]), w = weights)            
+            ##d = ((-1 * c) / 2) + 0.5            
+        }
+    }
+    
+    ##cluster
+    cluster_ind = cluster::pam(as.dist(distmat), k = 2, diss = TRUE, cluster.only = TRUE)
+
+    ##flip vars belonging to one of the clusters
+    vars2flip = vars[which(cluster_ind == 2)]
+
+    ##if the flip caused a decrease in variability then return vars2flip
+    ##flip 
+    ase_jvarflip = ase
+    ase_compl = 1 - ase
+    ase_jvarflip[vars2flip, ] = ase_compl[vars2flip, ]
+    
+    ##variability
+    weights = totcount
+    flipped_cv = get_wcv_ase(ase_jvarflip, weights)
+    noflip_cv = get_wcv_ase(ase, weights)
+    if(flipped_cv < noflip_cv){
+        vars2flip = vars2flip
+    }else{
+        vars2flip = character(0)
+    }
+    
+    return(vars2flip)
+}
+
 phase_exhaustive <- function(acset, vars){
 ###calculate a "compactness" score (inversely related to variance) along each cell-axis, and sum up along all cell-axis
 ###this gives a measure of the compactness of the distribution of all variants in the n-cell space
@@ -253,6 +365,30 @@ get_compactness <- function(gt){
     compactness = sum(abs(colSums(gt == 0, na.rm = TRUE) - colSums(gt == 2, na.rm = TRUE)))
 
     return(compactness)
+}
+
+get_cv_ase <- function(ase){
+
+    ##sum the cvs from every cell (assume cells are independent observations)
+    cvs = apply(ase, 2, function(jase){sd(jase) / mean(jase)})
+    cvtot = sum(cvs)
+
+    return(cvtot)
+}
+
+get_wcv_ase <- function(ase, weights){
+
+    ##sum the weighted cv2 from every cell (assume cells are independent observations)
+    ncells = ncol(ase)
+    cv2 = rep(NA, ncells)
+    for(jcell in 1:ncells){
+        jase = ase[, jcell]
+        jw = weights[, jcell]
+        cv2[jcell] = Hmisc::wtd.var(jase, jw) / (Hmisc::wtd.mean(jase, jw)^2)
+    }
+    cvtot = sum(cv2)
+
+    return(cvtot)
 }
 
 get_wcompactness <- function(gt, weights){

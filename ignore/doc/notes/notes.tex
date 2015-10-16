@@ -18,18 +18,23 @@
 ##Readme.md: devtools::install_github("edajeda/scphaser")
 ##Use checkpoint package if including any dependencies
 
+\subsection{Lower prio}
+phase_cluster using ase matrix instead of gt.
+
 \section{Qs/TBDs}
 
 ##*###
-##weighing
+##weighted clustering
 ##*###
-##Clustering: can probably weigh every element in a distance matrix calculation
-##otherwise, probably use wcKMedoids where w_jvar = P_jvar / sum(P_jvar) and P_jvar = sum(log(P))
+###TBD: wphase_cluster: use log(OR) SE as weights: (sqrt(sum(1/cij)))
+###TBD: wphase_cluster: use meta-analysis p-value as similarity measure, e.g. Stouffer's method on Fisher's test p-values from each cell.
+###TBD: wphase_cluster: ase: using correlation similarity measure
 
 ##*###
 ##gene phasing reliability score
 ##*###
-##possibly meta-analysis of jvar p-values (similar to geneiase). But this is basically a measure that not biallelic.
+##possibly meta-analysis of jvar p-values (similar to geneiase). But
+this is basically a measure of not being biallelic.
 ##otherwise calculate the prob that we get the same degree of phasing using randomized data.
 
 ##*###
@@ -140,6 +145,9 @@ We are doing an exhaustive search since the presence of missing values
 can cause non-optimal solutions if for example conducting a stepwise
 descent where one variant at a time is assessed (TBD: possibly put
 such an example in Supp).
+
+Possibly mention an example where weighing plays a role (see
+test-phasing.R for the minimal example).
 
 \section{Code style}
 Like Hadley Wickham (http://r-pkgs.had.co.nz/r.html#r) but with a few tweaks:
