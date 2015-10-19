@@ -279,6 +279,109 @@ ac_weighedtonotflip <- function(){
     return(list(acset = acset, exp = vars2flip_exp))    
 }
 
+ac_onezerocol <- function(){
+
+    refcount = matrix(c(0, 0, 0, 10, 100, 5), nrow = 3)
+    altcount = matrix(c(0, 0, 0, 0, 0, 15), nrow = 3)
+    vars2flip_exp = list(as.character(3), as.character(c(1, 2)))
+    
+    ncells = ncol(refcount)
+    vars = 1:nrow(refcount)
+    samples = 1:ncells
+    colnames(refcount) = samples
+    rownames(refcount) = vars
+    colnames(altcount) = samples
+    rownames(altcount) = vars
+    
+    ##featdata
+    nvars = length(vars)
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    
+    ##create acset
+    acset = new_acset(featdata, altcount = altcount, refcount = refcount)
+
+    ##call genotype
+    min_acount = 3
+    fc = 3 #To avoid for example refmap biases. fc == 3 corresponds to 75/25 ratio. Some of the first with expression of both alleles are then: 3/1, 6/2, 9/3.
+    acset = call_gt(acset, min_acount, fc)
+    lapply(acset, dim)
+
+    ##set weights
+    acset = set_aseweights(acset)
+
+    return(list(acset = acset, exp = vars2flip_exp))
+}
+
+test_that('can phase gt where one cell has all zero counts', {
+
+    ##create gt matrix, providing gt as input
+    acset_exp = ac_onezerocol()
+    acset = acset_exp$acset
+    exp_out = acset_exp$exp
+    vars = rownames(acset[['gt']])
+    
+    ##exhaust_gt
+    res = phase_exhaust_gt(acset, vars)
+    vars2flip = res$vars2flip
+    expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
+
+    ##cluster_gt
+    res = phase_cluster_gt(acset, vars)
+    vars2flip = res$vars2flip
+    expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
+
+    ##create acset with ac counts as input
+    acset_exp = ac_onezerocol()
+    acset = acset_exp$acset
+    exp_out = acset_exp$exp
+    vars = rownames(acset[['gt']])
+        
+    ##wexhaust_gt
+    res = wphase_exhaust_gt(acset, vars)
+    vars2flip = res$vars2flip
+    expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
+
+    ##wcluster_gt
+    res = wphase_cluster_gt(acset, vars)
+    vars2flip = res$vars2flip
+    expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))            
+})
+
+test_that('can phase ase where one cell has all zero counts', {
+
+    ##create gt matrix, providing gt as input
+    acset_exp = ac_onezerocol()
+    acset = acset_exp$acset
+    exp_out = acset_exp$exp
+    vars = rownames(acset[['gt']])
+    
+    ##exhaust_gt
+    res = phase_exhaust_ase(acset, vars)
+    vars2flip = res$vars2flip
+    expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
+
+    ##cluster_gt
+    res = phase_cluster_ase(acset, vars)
+    vars2flip = res$vars2flip
+    expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
+
+    ##create acset with ac counts as input
+    acset_exp = ac_onezerocol()
+    acset = acset_exp$acset
+    exp_out = acset_exp$exp
+    vars = rownames(acset[['gt']])
+        
+    ##wexhaust_gt
+    res = wphase_exhaust_ase(acset, vars)
+    vars2flip = res$vars2flip
+    expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
+
+    ##wcluster_gt
+    res = wphase_cluster_ase(acset, vars)
+    vars2flip = res$vars2flip
+    expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))            
+})
+
 test_that('can phase gt where half cells maternal and half paternal', {
 
     ##create gt matrix, providing gt as input
@@ -288,11 +391,13 @@ test_that('can phase gt where half cells maternal and half paternal', {
     vars = rownames(acset[['gt']])
     
     ##exhaust_gt
-    vars2flip = phase_exhaust_gt(acset, vars)
+    res = phase_exhaust_gt(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 
     ##cluster_gt
-    vars2flip = phase_cluster_gt(acset, vars)
+    res = phase_cluster_gt(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 
     ##create acset with ac counts as input
@@ -302,11 +407,13 @@ test_that('can phase gt where half cells maternal and half paternal', {
     vars = rownames(acset[['gt']])
         
     ##wexhaust_gt
-    vars2flip = wphase_exhaust_gt(acset, vars)
+    res = wphase_exhaust_gt(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 
     ##wcluster_gt
-    vars2flip = wphase_cluster_gt(acset, vars)
+    res = wphase_cluster_gt(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))            
 })
 
@@ -319,19 +426,23 @@ test_that('can phase ase where half cells maternal and half paternal', {
     vars = rownames(acset[['gt']])
 
     ##exhaust_ac
-    vars2flip = phase_exhaust_ase(acset, vars)
+    res = phase_exhaust_ase(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 
     ##wexhaust_ac
-    vars2flip = wphase_exhaust_ase(acset, vars)
+    res = wphase_exhaust_ase(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
     
     ##cluster_ac
-    vars2flip = phase_cluster_ase(acset, vars)
+    res = phase_cluster_ase(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
     
     ##wcluster_ac
-    vars2flip = wphase_cluster_ase(acset, vars)
+    res = wphase_cluster_ase(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))    
 })
 
@@ -344,11 +455,13 @@ test_that('can phase gt where cells have the same phase', {
     vars = rownames(acset[['gt']])
     
     ##exhaust_gt
-    vars2flip = phase_exhaust_gt(acset, vars)
+    res = phase_exhaust_gt(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 
     ##cluster_gt
-    vars2flip = phase_cluster_gt(acset, vars)
+    res = phase_cluster_gt(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 
     ##create acset with ac counts as input
@@ -358,11 +471,13 @@ test_that('can phase gt where cells have the same phase', {
     vars = rownames(acset[['gt']])
         
     ##wexhaust_gt
-    vars2flip = wphase_exhaust_gt(acset, vars)
+    res = wphase_exhaust_gt(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 
     ##wcluster_gt
-    vars2flip = wphase_cluster_gt(acset, vars)
+    res = wphase_cluster_gt(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 })
 
@@ -375,19 +490,23 @@ test_that('can phase ase where cells have the same phase', {
     vars = rownames(acset[['gt']])
 
     ##exhaust_ac
-    vars2flip = phase_exhaust_ase(acset, vars)
+    res = phase_exhaust_ase(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 
     ##wexhaust_ac
-    vars2flip = wphase_exhaust_ase(acset, vars)
+    res = wphase_exhaust_ase(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
     
     ##cluster_ac
-    vars2flip = phase_cluster_ase(acset, vars)
+    res = phase_cluster_ase(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
     
     ##wcluster_ac
-    vars2flip = wphase_cluster_ase(acset, vars)
+    res = wphase_cluster_ase(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))    
 })
 
@@ -400,11 +519,13 @@ test_that('all or nothing change when gt have been prephased', {
     vars = rownames(acset[['gt']])
     
     ##exhaust_gt
-    vars2flip = phase_exhaust_gt(acset, vars)
+    res = phase_exhaust_gt(acset, vars)
+    vars2flip = res$vars2flip
     expect_identical(vars2flip, exp_out)
 
     ##cluster_gt
-    vars2flip = phase_cluster_gt(acset, vars)
+    res = phase_cluster_gt(acset, vars)
+    vars2flip = res$vars2flip
     expect_identical(vars2flip, exp_out)
 
     ##create acset with ac counts as input
@@ -414,11 +535,13 @@ test_that('all or nothing change when gt have been prephased', {
     vars = rownames(acset[['gt']])
         
     ##wexhaust_gt    
-    vars2flip = wphase_exhaust_gt(acset, vars)
+    res = wphase_exhaust_gt(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 
     ##wcluster_gt
-    vars2flip = wphase_cluster_gt(acset, vars)
+    res = wphase_cluster_gt(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 })
 
@@ -431,19 +554,23 @@ test_that('all or nothing change when ase have been prephased', {
     vars = rownames(acset[['gt']])
 
     ##exhaust_ac
-    vars2flip = phase_exhaust_ase(acset, vars)
+    res = phase_exhaust_ase(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 
     ##wexhaust_ac
-    vars2flip = wphase_exhaust_ase(acset, vars)
+    res = wphase_exhaust_ase(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
     
     ##cluster_ac
-    vars2flip = phase_cluster_ase(acset, vars)
+    res = phase_cluster_ase(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
     
     ##wcluster_ac
-    vars2flip = wphase_cluster_ase(acset, vars)
+    res = wphase_cluster_ase(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 })
 
@@ -456,19 +583,23 @@ test_that('weights cause a var to be flipped', {
     vars = rownames(acset[['gt']])    
     
     ##wexhaust_gt
-    vars2flip = wphase_exhaust_gt(acset, vars)
+    res = wphase_exhaust_gt(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 
     ##wexhaust_ac
-    vars2flip = wphase_exhaust_ase(acset, vars)
+    res = wphase_exhaust_ase(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 
     ##wcluster_gt
-    vars2flip = wphase_cluster_gt(acset, vars)
+    res = wphase_cluster_gt(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
     
     ##wcluster_ac
-    vars2flip = wphase_cluster_ase(acset, vars)
+    res = wphase_cluster_ase(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 })
 
@@ -481,18 +612,22 @@ test_that('weights cause a var to not be flipped', {
     vars = rownames(acset[['gt']])    
     
     ##wexhaust_gt
-    vars2flip = wphase_exhaust_gt(acset, vars)
+    res = wphase_exhaust_gt(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 
     ##wexhaust_ac
-    vars2flip = wphase_exhaust_ase(acset, vars)
+    res = wphase_exhaust_ase(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 
     ##wcluster_gt
-    vars2flip = wphase_cluster_gt(acset, vars)
+    res = wphase_cluster_gt(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
     
     ##wcluster_ac
-    vars2flip = wphase_cluster_ase(acset, vars)
+    res = wphase_cluster_ase(acset, vars)
+    vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
 })

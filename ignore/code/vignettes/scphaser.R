@@ -77,11 +77,24 @@ lapply(acset, dim)
 ## */
 ##' ##Phase
 ##+
-acset = phase(acset)
+acset = phase(acset, input = 'ac', weigh = FALSE, method = 'exhaust')
+acset = phase(acset, input = 'ac', weigh = FALSE, method = 'cluster')
+acset = phase(acset, input = 'ac', weigh = TRUE, method = 'exhaust')
+acset = phase(acset, input = 'ac', weigh = TRUE, method = 'cluster')
+
+acset = phase(acset, input = 'gt', weigh = FALSE, method = 'exhaust')
+acset = phase(acset, input = 'gt', weigh = FALSE, method = 'cluster')
+acset = phase(acset, input = 'gt', weigh = TRUE, method = 'exhaust')
+acset = phase(acset, input = 'gt', weigh = TRUE, method = 'cluster')
+
 lapply(acset, dim)
 
-##Number of variants unchanged (FALSE) and changed (TRUE)
-table(acset[['varflip']])
+##Number of variants changed
+length(acset[['varflip']])
+
+##scores
+length(unique(acset[['featdata']][, 'feat']))
+length(unique(acset[['score']]))
 
 
 ## /*
