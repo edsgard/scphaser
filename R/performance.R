@@ -1,5 +1,51 @@
 
 
+get_phase_pval <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nvars_max = Inf, nperm = 100, nminvar = 2, min_acount = 3, fc = 3){
+
+    ac = !is.null(acset[['refcount']])
+    nfeats = length(unique(acset[['featdata']][, 'feat']))
+    nullscore = matrix(NA, nrow = nfeats, ncol = nperm)
+    
+    for(jperm in 1:nperm){
+        
+        ##randomize
+        acset_rnd = racset(acset)
+
+        ##call gt
+        if(ac){
+            acset_rnd = filter_nminvar(acset_rnd, nminvar)
+            acset_rnd = call_gt(acset_rnd, min_acount, fc)
+        }
+        
+        ##preproc
+        acset_rnd = filter_nminmono(acset_rnd)
+        acset_rnd = filter_nminvar(acset_rnd, nminvar)
+        
+        ##phase
+        acset_rnd = phase(acset_rnd, input, weigh, method, nvars_max)
+
+        ##get score
+        nullscore[, jperm] = acset_rnd[['score']]
+    }
+
+
+    ##*###
+    ##get p-value
+    ##*##
+    obsscore = acset[['score']]
+    feats = names(obsscore)
+    nfeats = length(feats)
+    pval = rep(NA, nfeats)
+    names(pval) = feats
+    
+    ##
+    for(jfeat in 1:nfeats){
+        pval[jfeat] = length(which(nullscore[jfeat, ] <= obsscore[jfeat])) / nperm
+    }
+    
+    return(pval)
+}
+
 gtsynth_acset <- function(nvars, nalt_ofvars, ncells, notherhaplo_ofcells, percnoise = 0){
 ##synthesize genotype matrix and construct acset
 
@@ -66,7 +112,8 @@ plot_conc <- function(acset, feats = NA, cex = 0.5){
 
 racset <- function(acset){
 ###Randomly swap half of the elements in the count matrices
-    
+###This keeps table sums of both counts and gts constant. However, row margins are not fixed.
+
     altcount = acset[['altcount']]
     refcount = acset[['refcount']]
 
@@ -82,6 +129,22 @@ racset <- function(acset){
     acset_rnd = new_acset(acset[['featdata']], refcount_swapped, altcount_swapped, acset[['phenodata']])
     
     return(acset_rnd)
+}
+
+rgt <- function(acset){
+###Some cells may have low read counts, thereby being enriched for NA's. Similarly, they may have high expression, enriching for biallelic calls, so don't permute those.
+###Currently permutation within the whole table is done, not such that row- or col-margins are fixed.
+    
+    gt = acset[['gt']]
+
+    perm.ind = which(gt == 2 | gt == 0)
+    nels = length(perm.ind)
+    perm.sampled.ind = sample(perm.ind)
+    gt[perm.ind] = gt[perm.sampled.ind]
+
+    acset[['gt']] = gt
+
+    return(acset)
 }
 
 set_gt_conc <- function(acset){

@@ -2,6 +2,11 @@
 
 \section{TODO}
 ##Quality of phasing for each gene. 
+##add randomgt fcn to be able to calculate pval if no count data
+##pval: store filter and phasing parameters such that can reuse the same ones
+when calling the pvalue fcn.
+##Allow setting verbosity level (0 = quiet) to skip printing when
+calculating p-value
 ##score for each variant (prop of diffs compared to varflip)
 ##Real mouse data
 ##Test TPR and FPR on real mouse data
@@ -42,6 +47,9 @@ this is basically a measure of not being biallelic.
 against null-dist of within-gene variances, obtained by using randomized counts with similar properties
 (sampled from the same count-dist). Think about if such a p-value is
 proportional to sample-size (read counts and number of cells).
+That randomization basically looks at how probably it is that we get
+observations with only two-states. Which is not want we want. Instead,
+we can probably use methods to assess significance of clustering.
 
 ##*###
 ##call_gt
@@ -157,6 +165,11 @@ test-phasing.R for the minimal example).
 
 Three arguments that can be varied: {gt, ase}, {exhaust, cluster},
 {no-weights, weighted}. All eight combinations has been implemented.
+
+Randomize: Keep row margins fixed
+Clustering error: sum(vars) (trace(cov))
+Empirical p-value
+Z-score to measure distance from null-dist: %http://citeseerx.ist.psu.edu/viewdoc/download?doi=10.1.1.76.3286&rep=rep1&type=pdf
 
 \section{Code style}
 Like Hadley Wickham (http://r-pkgs.had.co.nz/r.html#r) but with a few tweaks:

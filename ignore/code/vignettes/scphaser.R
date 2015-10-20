@@ -48,7 +48,7 @@ lapply(acset, dim)
 ##' ##Call genotypes
 ##+
 min_acount = 3
-fc = 50
+fc = 3
 acset = call_gt(acset, min_acount, fc)
 lapply(acset, dim)
 

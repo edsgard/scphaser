@@ -1,6 +1,6 @@
 
 
-phase <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nvars_max = Inf){
+phase <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nvars_max = 10){
     
     ##feat2vars
     featdata = acset[['featdata']]
@@ -12,7 +12,7 @@ phase <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nvars_m
     varflip = rep(FALSE, nvars)
     names(varflip) = vars
 
-    ##record of score per feature (score = compactness (if gt) and score = variability (if ase) of variants after phasing)
+    ##record of score per feature (score = variability between variants after phasing)
     feats = names(feat2var_list)
     nfeats = length(feats)
     score = rep(NA, nfeats)
@@ -32,8 +32,10 @@ phase <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nvars_m
         vars = feat2var_list[[jfeat]]
         jacset = subset_rows(acset, vars)
 
+        print(jfeat)
+        
         ##phase single feat
-        res = phase_feat(jacset, input, weigh, method)
+        res = phase_feat(jacset, input, weigh, method, nvars_max)
 
         ##store
         varflip[res[['vars2flip']]] = TRUE
@@ -110,7 +112,10 @@ phase_cluster_gt <- function(acset, vars){
     ##get genotype matrix for vars
     jfeat_gt = acset[['gt']][vars, ]
     jfeat_gt_compl = acset[['gt_compl']][vars, ]
-    
+
+    ##the distance need to be increased if NAs. Treat it the same as biallelic.
+    jfeat_gt[which(is.na(jfeat_gt))] = 1
+
     ##cluster
     cluster_ind = cluster::pam(jfeat_gt, k = 2, diss = FALSE, metric = 'euclidean', cluster.only = TRUE)
 
@@ -119,18 +124,18 @@ phase_cluster_gt <- function(acset, vars){
     gt_jvarflip = jfeat_gt
     gt_jvarflip[vars2flip, ] = jfeat_gt_compl[vars2flip, ]
 
-    ##if the flip caused an increase of compactness then return vars2flip
-    flipped_compactness = get_compactness(gt_jvarflip)
-    noflip_compactness = get_compactness(jfeat_gt)
-    if(flipped_compactness > noflip_compactness){
+    ##if the flip caused a decrease in variability then return vars2flip
+    flipped_variability = get_var_gt(gt_jvarflip)
+    noflip_variability = get_var_gt(jfeat_gt)
+    if(flipped_variability < noflip_variability){
         vars2flip = vars2flip
-        max_c = flipped_compactness
+        min_var = flipped_variability
     }else{
         vars2flip = character(0)
-        max_c = noflip_compactness
+        min_var = noflip_variability
     }
     
-    return(list(vars2flip = vars2flip, stat = max_c))
+    return(list(vars2flip = vars2flip, stat = min_var))
 }
 
 wphase_cluster_gt <- function(acset, vars){
@@ -168,23 +173,23 @@ wphase_cluster_gt <- function(acset, vars){
     ##flip vars belonging to one of the clusters
     vars2flip = vars[which(cluster_ind == 2)]
 
-    ##if the flip caused an increase of compactness then return vars2flip
+    ##if the flip caused a decrease of the variability then return vars2flip
     gt_jvarflip = jfeat_gt
     gt_jvarflip[vars2flip, ] = jfeat_gt_compl[vars2flip, ]
 
-    ##compactness
+    ##variability
     weights = acset[['weights']]
-    flipped_compactness = get_wcompactness(gt_jvarflip, weights)
-    noflip_compactness = get_wcompactness(jfeat_gt, weights)
-    if(flipped_compactness > noflip_compactness){
+    flipped_variability = get_wvar_gt(gt_jvarflip, weights)
+    noflip_variability = get_wvar_gt(jfeat_gt, weights)
+    if(flipped_variability < noflip_variability){
         vars2flip = vars2flip
-        max_c = flipped_compactness
+        min_var = flipped_variability
     }else{
         vars2flip = character(0)
-        max_c = noflip_compactness
+        min_var = noflip_variability
     }
     
-    return(list(vars2flip = vars2flip, stat = max_c))
+    return(list(vars2flip = vars2flip, stat = min_var))
 }
 
 phase_cluster_ase <- function(acset, vars){
@@ -220,15 +225,15 @@ phase_cluster_ase <- function(acset, vars){
     ##variability
     ##flipped_cv = get_cv_ase(ase_jvarflip)
     ##noflip_cv = get_cv_ase(ase)
-    flipped_var = get_var_ase(ase_jvarflip)
-    noflip_var = get_var_ase(ase)
+    flipped_variability = get_var_ase(ase_jvarflip)
+    noflip_variability = get_var_ase(ase)
 
-    if(flipped_var < noflip_var){
+    if(flipped_variability < noflip_variability){
         vars2flip = vars2flip
-        min_var = flipped_var
+        min_var = flipped_variability
     }else{
         vars2flip = character(0)
-        min_var = noflip_var
+        min_var = noflip_variability
     }
     
     return(list(vars2flip = vars2flip, stat = min_var))
@@ -285,23 +290,23 @@ wphase_cluster_ase <- function(acset, vars){
     weights = totcount
     ##flipped_cv = get_wcv_ase(ase_jvarflip, weights)
     ##noflip_cv = get_wcv_ase(ase, weights)
-    flipped_var = get_wvar_ase(ase_jvarflip, weights)
-    noflip_var = get_wvar_ase(ase, weights)    
-    if(flipped_var < noflip_var){
+    flipped_variability = get_wvar_ase(ase_jvarflip, weights)
+    noflip_variability = get_wvar_ase(ase, weights)    
+    if(flipped_variability < noflip_variability){
         vars2flip = vars2flip
-        min_var = flipped_var
+        min_var = flipped_variability
     }else{
         vars2flip = character(0)
-        min_var = noflip_var
+        min_var = noflip_variability
     }
 
     return(list(vars2flip = vars2flip, stat = min_var))
 }
 
 phase_exhaust_gt <- function(acset, vars){
-###calculate a "compactness" score (inversely related to variance) along each cell-axis, and sum up along all cell-axis
-###this gives a measure of the compactness of the distribution of all variants in the n-cell space
-###our aim is to maximize this compactness        
+###calculate a "compactness" score along each cell-axis, and sum up along all cell-axis to get a total compactness score of the distribution of variants.
+###1 / compactness gives a measure of the variability of the distribution of all variants in the n-cell space
+###our aim is to minimize the variablity
 
     ##get genotype matrix for vars
     jfeat_gt = acset[['gt']][vars, ]
@@ -314,9 +319,9 @@ phase_exhaust_gt <- function(acset, vars){
     ##exclude flipping of all vars since identical results to no change (always last row)
     flipcombs = flipcombs[1:(nrow(flipcombs) - 1), ]
 
-    ##flip a set of variants and calculate compactness
+    ##flip a set of variants and calculate variability
     nflips = nrow(flipcombs)
-    flipped_compactness = rep(-1, nflips)
+    flipped_variability = rep(Inf, nflips)
     for(jflip in 1:nflips){
 
         ##reset gt
@@ -326,22 +331,19 @@ phase_exhaust_gt <- function(acset, vars){
         vars2flip = vars[which(flipcombs[jflip, ] == 1)]
         gt_jvarflip[vars2flip, ] = jfeat_gt_compl[vars2flip, ]
         
-        ##compactness of genotype matrix with vars flipped to complementary gt
-        flipped_compactness[jflip] = get_compactness(gt_jvarflip)            
+        ##variability of genotype matrix with vars flipped to complementary gt
+        flipped_variability[jflip] = get_var_gt(gt_jvarflip)            
     }
 
-    ##get the combination of vars to flip that achieved maximum compactness
-    max_ind = which.max(flipped_compactness)
-    vars2flip = vars[which(flipcombs[max_ind, ] == 1)]
-    max_c = flipped_compactness[max_ind]
+    ##get the combination of vars to flip that achieved minimum variability
+    min_ind = which.min(flipped_variability)
+    vars2flip = vars[which(flipcombs[min_ind, ] == 1)]
+    min_variability = flipped_variability[min_ind]
     
-    return(list(vars2flip = vars2flip, stat = max_c))
+    return(list(vars2flip = vars2flip, stat = min_variability))
 }
 
 wphase_exhaust_gt <- function(acset, vars){
-###calculate a "compactness" score (inversely related to variance) along each cell-axis, and sum up along all cell-axis
-###this gives a measure of the compactness of the distribution of all variants in the n-cell space
-###our aim is to maximize this compactness        
 
     ##get genotype and weight matrix for vars
     jfeat_gt = acset[['gt']][vars, ]
@@ -355,9 +357,9 @@ wphase_exhaust_gt <- function(acset, vars){
     ##exclude flipping of all vars since identical results to no change (always last row)
     flipcombs = flipcombs[1:(nrow(flipcombs) - 1), ]
 
-    ##flip a set of variants and calculate compactness
+    ##flip a set of variants and calculate variability
     nflips = nrow(flipcombs)
-    flipped_compactness = rep(-1, nflips)
+    flipped_variability = rep(Inf, nflips)
     for(jflip in 1:nflips){
 
         ##reset gt
@@ -367,16 +369,16 @@ wphase_exhaust_gt <- function(acset, vars){
         vars2flip = vars[which(flipcombs[jflip, ] == 1)]
         gt_jvarflip[vars2flip, ] = jfeat_gt_compl[vars2flip, ]
         
-        ##weighted compactness of genotype matrix with vars flipped to complementary gt
-        flipped_compactness[jflip] = get_wcompactness(gt_jvarflip, weights)            
+        ##weighted variability of genotype matrix with vars flipped to complementary gt
+        flipped_variability[jflip] = get_wvar_gt(gt_jvarflip, weights)            
     }
 
-    ##get the combination of vars to flip that achieved maximum compactness
-    max_ind = which.max(flipped_compactness)
-    vars2flip = vars[which(flipcombs[max_ind, ] == 1)]
-    max_c = flipped_compactness[max_ind]
+    ##get the combination of vars to flip that achieved maximum variability
+    min_ind = which.min(flipped_variability)
+    vars2flip = vars[which(flipcombs[min_ind, ] == 1)]
+    min_variability = flipped_variability[min_ind]
 
-    return(list(vars2flip = vars2flip, stat = max_c))
+    return(list(vars2flip = vars2flip, stat = min_variability))
 }
 
 phase_exhaust_ase <- function(acset, vars){
@@ -404,9 +406,9 @@ phase_exhaust_ase <- function(acset, vars){
     ##exclude flipping of all vars since identical results to no change (always last row)
     flipcombs = flipcombs[1:(nrow(flipcombs) - 1), ]
 
-    ##flip a set of variants and calculate compactness
+    ##flip a set of variants and calculate variability
     nflips = nrow(flipcombs)
-    flipped_var = rep(Inf, nflips)
+    flipped_variability = rep(Inf, nflips)
     for(jflip in 1:nflips){
 
         ##reset ase matrix
@@ -418,13 +420,13 @@ phase_exhaust_ase <- function(acset, vars){
         
         ##cv of ase matrix with vars flipped to complementary ase
         ##flipped_cv[jflip] = get_cv_ase(ase_jvarflip)
-        flipped_var[jflip] = get_var_ase(ase_jvarflip)
+        flipped_variability[jflip] = get_var_ase(ase_jvarflip)
     }
 
     ##get the combination of vars to flip that achieved minimum cv
-    min_ind = which.min(flipped_var)
+    min_ind = which.min(flipped_variability)
     vars2flip = vars[which(flipcombs[min_ind, ] == 1)]    
-    min_var = flipped_var[min_ind]
+    min_var = flipped_variability[min_ind]
    
     return(list(vars2flip = vars2flip, stat = min_var))
 }
@@ -454,9 +456,9 @@ wphase_exhaust_ase <- function(acset, vars){
     ##exclude flipping of all vars since identical results to no change (always last row)
     flipcombs = flipcombs[1:(nrow(flipcombs) - 1), ]
 
-    ##flip a set of variants and calculate compactness
+    ##flip a set of variants and calculate variability
     nflips = nrow(flipcombs)
-    flipped_var = rep(Inf, nflips)
+    flipped_variability = rep(Inf, nflips)
     for(jflip in 1:nflips){
 
         ##reset ase matrix
@@ -468,25 +470,27 @@ wphase_exhaust_ase <- function(acset, vars){
         
         ##cv of ase matrix with vars flipped to complementary ase
         ##flipped_cv[jflip] = get_wcv_ase(ase_jvarflip, weights = totcount)
-        flipped_var[jflip] = get_wvar_ase(ase_jvarflip, weights = totcount)
+        flipped_variability[jflip] = get_wvar_ase(ase_jvarflip, weights = totcount)
     }
 
     ##get the combination of vars to flip that achieved minimum cv
-    min_ind = which.min(flipped_var)
+    min_ind = which.min(flipped_variability)
     vars2flip = vars[which(flipcombs[min_ind, ] == 1)]    
-    min_var = flipped_var[min_ind]
+    min_var = flipped_variability[min_ind]
    
     return(list(vars2flip = vars2flip, stat = min_var))
 }
 
-get_compactness <- function(gt){
+get_var_gt <- function(gt){
     ##TBD: this also counts elements where only a monoallelic call in a single var. Should be ok, since that number is invariant to a complement shift.
     compactness = sum(abs(colSums(gt == 0, na.rm = TRUE) - colSums(gt == 2, na.rm = TRUE)))
 
-    return(compactness)
+    v = 1 / compactness
+    
+    return(v)
 }
 
-get_wcompactness <- function(gt, weights){
+get_wvar_gt <- function(gt, weights){
 ###weighted compactness
 
     nvars = nrow(gt)
@@ -502,7 +506,9 @@ get_wcompactness <- function(gt, weights){
     
     compactness = sum(abs(colSums(ref_mat) - colSums(alt_mat)))
 
-    return(compactness)
+    v = 1 / compactness
+    
+    return(v)
 }
 
 get_var_ase <- function(ase){
@@ -613,7 +619,7 @@ new_acset <- function(featdata, refcount = NA, altcount = NA, phenodata = NA, gt
         acset = list(featdata = featdata, phenodata = phenodata, refcount = refcount, altcount = altcount)
     }
 
-    ##errorcheck that featdata[, 'vars'] is character
+    ##errorcheck that featdata[, 'var'] and featdata[, 'feat'] is character
     ##TODO: errorcheck that input featdata and phenodata are dataframes
     ##TODO: check that either refcount and altcount provided and not gt, OR, gt and none of the count matrices
     ##TODO: check that refcount and altcount are matrixes
@@ -628,7 +634,15 @@ new_acset <- function(featdata, refcount = NA, altcount = NA, phenodata = NA, gt
 subset_rows <- function(acset, sel.ind){
 
     ##data structures with features as rows
-    feat_structs = c('altcount', 'refcount', 'featdata')
+    feat_structs = c('featdata')
+
+    if('refcount' %in% names(acset)){
+        feat_structs = c(feat_structs, 'refcount')
+    }
+
+    if('altcount' %in% names(acset)){
+        feat_structs = c(feat_structs, 'altcount')
+    }
 
     if('gt' %in% names(acset)){
         feat_structs = c(feat_structs, 'gt')
@@ -640,6 +654,10 @@ subset_rows <- function(acset, sel.ind){
 
     if('gt_phased' %in% names(acset)){
         feat_structs = c(feat_structs, 'gt_phased')
+    }    
+
+    if('weights' %in% names(acset)){
+        feat_structs = c(feat_structs, 'weights')
     }    
 
     ##subset
@@ -657,7 +675,7 @@ filter_nminmono <- function(acset, nminmono = 1){
 ###filter variants having less than nminmono mono-allelic calls of each allele across samples
     
     gt = acset[['gt']]
-    pass_vars = which(rowSums(gt == 1, na.rm = TRUE) >= nminmono & rowSums(gt == 2, na.rm = TRUE) >= nminmono)
+    pass_vars = which(rowSums(gt == 0, na.rm = TRUE) >= nminmono & rowSums(gt == 2, na.rm = TRUE) >= nminmono)
     acset = subset_rows(acset, pass_vars)
 
     return(acset)

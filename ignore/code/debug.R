@@ -2,7 +2,14 @@
 
 check <- function(){
 
-
+    ##meth = exhaust, input = ac, weigh = T
+    ##slow when nvars: 15
+    ##CDC27: nvars: 59
+    ##Error in rep.int(rep.int(seq_len(nx), rep.int(rep.fac, nx)), orep) : 
+    ##vector is too large
+    ##most probably expand.grid with 59 {0,1} binaries.
+    
+    
     ##*###
     ##Test speed diff btw getting pval by binom.test or pbinom
     ##*###
