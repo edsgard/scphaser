@@ -1,7 +1,6 @@
 
 
 \section{TODO}
-##Test p-value calc on tcell data
 ##Score for each variant (prop of diffs compared to gt_phased cell-wise majority vote)
 ##Real mouse data
 ##Test TPR and FPR on real mouse data
@@ -35,6 +34,9 @@ phase_cluster using ase matrix instead of gt.
 ##*###
 ##gene phasing reliability score
 ##*###
+
+##A bit strange that when permuting the whole matrix the p-values gets worse than when keeping the row-margins fixed (permuting within each row).
+
 ##possibly meta-analysis of jvar p-values (similar to geneiase). But
 this is basically a measure of not being biallelic.
 ##otherwise calculate the prob that we get the same degree of phasing using randomized data.

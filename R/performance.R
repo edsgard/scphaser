@@ -1,63 +1,5 @@
 
 
-get_phase_pval <- function(acset, nperm = 100){
-
-    ac = !is.null(acset[['refcount']])
-    nfeats = length(unique(acset[['featdata']][, 'feat']))
-    nullscore = matrix(NA, nrow = nfeats, ncol = nperm)
-
-    ##get args
-    phaseargs = acset[['args']][['phase']]
-    input = phaseargs[['input']]
-    weigh = phaseargs[['weigh']]
-    method = phaseargs[['method']]
-    nvars_max = phaseargs[['nvars_max']]
-
-    filterargs = acset[['args']][['filter']]
-    nmin_var = filterargs[['nmin_var']]
-    min_acount = filterargs[['min_acount']]
-    fc = filterargs[['fc']]
-    
-    ##
-    for(jperm in 1:nperm){
-        
-        ##randomize
-        if(ac){
-            acset_rnd = racset(acset, type = 'ac')
-            acset_rnd = filter_nminvar(acset_rnd, nmin_var)
-            acset_rnd = call_gt(acset_rnd, min_acount, fc)
-        }else{
-            acset_rnd = racset(acset, type = 'gt')
-        }
-        
-        ##preproc
-        acset_rnd = filter_nminmono(acset_rnd)
-        acset_rnd = filter_nminvar(acset_rnd, nmin_var)
-        
-        ##phase
-        acset_rnd = phase(acset_rnd, input, weigh, method, nvars_max, verbosity = 0)
-
-        ##get score
-        nullscore[, jperm] = acset_rnd[['score']]
-    }
-
-
-    ##*###
-    ##get p-value
-    ##*##
-    obsscore = acset[['score']]
-    feats = names(obsscore)
-    nfeats = length(feats)
-    pval = rep(NA, nfeats)
-    names(pval) = feats
-    
-    ##
-    for(jfeat in 1:nfeats){
-        pval[jfeat] = (1 + length(which(nullscore[jfeat, ] <= obsscore[jfeat]))) / (nperm + 1)
-    }
-    
-    return(pval)
-}
 
 gtsynth_acset <- function(nvars, nalt_ofvars, ncells, notherhaplo_ofcells, percnoise = 0){
 ##synthesize genotype matrix and construct acset
@@ -83,6 +25,146 @@ gtsynth_acset <- function(nvars, nalt_ofvars, ncells, notherhaplo_ofcells, percn
 
     return(acset)
 }
+
+get_phase_pval <- function(acset, nperm = 100, fixedrowmargin = TRUE){
+
+    ac = !is.null(acset[['refcount']])
+    feats = unique(acset[['featdata']][, 'feat'])
+    nfeats = length(feats)
+    nullscore = matrix(NA, nrow = nfeats, ncol = nperm)
+    rownames(nullscore) = feats
+
+    ##get args
+    phaseargs = acset[['args']][['phase']]
+    input = phaseargs[['input']]
+    weigh = phaseargs[['weigh']]
+    method = phaseargs[['method']]
+    nvars_max = phaseargs[['nvars_max']]
+    filterargs = acset[['args']][['filter']]
+    nmin_var = filterargs[['nmin_var']]
+    min_acount = filterargs[['min_acount']]
+    fc = filterargs[['fc']]
+
+    ##*###
+    ##Calculate null-dist
+    ##*###
+    cat('\n')
+    progbar = txtProgressBar(min = 0, max = nperm, style = 3)
+    for(jperm in 1:nperm){
+        
+        ##randomize
+        if(ac){
+            acset_rnd = racset(acset, type = 'ac', fixedrowmargin = fixedrowmargin)
+            acset_rnd = filter_nminvar(acset_rnd, nmin_var)
+            acset_rnd = call_gt(acset_rnd, min_acount, fc)
+        }else{
+            acset_rnd = racset(acset, type = 'gt', fixedrowmargin = fixedrowmargin)
+        }
+        
+        ##preproc
+        acset_rnd = filter_nminmono(acset_rnd)
+        acset_rnd = filter_nminvar(acset_rnd, nmin_var)
+        
+        ##phase
+        acset_rnd = phase(acset_rnd, input, weigh, method, nvars_max, verbosity = 0)
+
+        ##get score
+        j.nullscores = acset_rnd[['score']]
+        feats = names(j.nullscores)
+        nullscore[feats, jperm] = j.nullscores
+
+        setTxtProgressBar(progbar, jperm)
+    }
+
+
+    ##*###
+    ##Get p-value
+    ##*##
+    obsscore = acset[['score']]
+    feats = names(obsscore)
+    nfeats = length(feats)
+    pval = rep(NA, nfeats)
+    names(pval) = feats
+    
+    ##
+    for(jfeat in feats){
+        pval[jfeat] = (1 + length(which(nullscore[jfeat, ] <= obsscore[jfeat]))) / (nperm + 1)
+    }
+    
+    return(pval)
+}
+
+racset <- function(acset, type = 'ac', fixedrowmargin = TRUE){
+
+    if(type == 'ac'){
+        acset_rnd = rac(acset, fixedrowmargin)
+    }
+    if(type == 'gt'){
+        acset_rnd = rgt(acset, fixedrowmargin)
+    }    
+    
+    return(acset_rnd)
+}
+
+rac <- function(acset, fixedrowmargin = TRUE){
+
+    altcount = acset[['altcount']]
+    refcount = acset[['refcount']]
+    nrow = nrow(refcount)
+    ncol = ncol(refcount)
+
+    if(fixedrowmargin){
+        ##permute within row, thus keeping rowmargin fixed
+        
+        for(jrow in 1:nrow){
+            jalt = altcount[jrow, ]
+            jref = refcount[jrow, ]
+            
+            perm.ind = setdiff(1:ncol, which(is.na(jalt) | is.na(jref)))
+            perm.sampled.ind = sample(perm.ind)
+            jalt[perm.ind] = jalt[perm.sampled.ind]
+            jref[perm.ind] = jref[perm.sampled.ind]
+
+            altcount[jrow, ] = jalt
+            refcount[jrow, ] = jref
+        }
+    }else{
+        ##Keep table sums of both counts and gts constant. However, row margins are not fixed.
+
+        perm.ind = setdiff(1:(nrow * ncol), which(is.na(altcount) | is.na(refcount)))
+        perm.sampled.ind = sample(perm.ind)
+        altcount[perm.ind] = altcount[perm.sampled.ind]
+        refcount[perm.ind] = refcount[perm.sampled.ind]
+    }
+    acset_rnd = new_acset(acset[['featdata']], refcount, altcount, acset[['phenodata']])
+
+    return(acset_rnd)
+}
+
+rgt <- function(acset, fixedrowmargin = TRUE){
+###Some cells may have low read counts, thereby being enriched for NA's. Similarly, they may have high expression, enriching for biallelic calls (gt==1), so not permuting those elements.
+    
+    gt = acset[['gt']]
+
+    if(fixedrowmargin){
+        gt = t(apply(gt, 1, gtperm))
+    }else{
+        ##Permutation within the whole table, not such that row- or col-margins are fixed.
+        gt = gtperm(gt)
+    }
+    acset[['gt']] = gt
+
+    return(acset)
+}
+
+gtperm <- function(gt){
+###Some cells may have low read counts, thereby being enriched for NA's. Similarly, they may have high expression, enriching for biallelic calls (gt==1), so not permuting those elements.
+    perm.ind = which(gt == 2 | gt == 0)
+    perm.sampled.ind = sample(perm.ind)
+    gt[perm.ind] = gt[perm.sampled.ind]
+
+    return(gt)
+}        
 
 plot_conc <- function(acset, feats = NA, cex = 0.5){
 
@@ -121,55 +203,6 @@ plot_conc <- function(acset, feats = NA, cex = 0.5){
     text(x = x_txt, y = y_txt, c("Concordant", "Incordordant"), col = c("darkblue", "darkgreen"))
     abline(h = 0)
     
-}
-
-racset <- function(acset, type = 'ac'){
-
-    if(type == 'ac'){
-        acset_rnd = rac(acset)
-    }
-    if(type == 'gt'){
-        acset_rnd = rgt(acset)
-    }    
-    
-    return(acset_rnd)
-}
-
-rac <- function(acset){
-###Randomly swap half of the elements in the count matrices
-###This keeps table sums of both counts and gts constant. However, row margins are not fixed.
-
-    altcount = acset[['altcount']]
-    refcount = acset[['refcount']]
-
-    ##swap half of the elements in the count matrices
-    nels = length(altcount)
-    swap.ind = sample(1:nels, size = floor(nels / 2))
-    
-    altcount_swapped = altcount
-    refcount_swapped = refcount
-    altcount_swapped[swap.ind] = refcount[swap.ind]
-    refcount_swapped[swap.ind] = altcount[swap.ind]
-
-    acset_rnd = new_acset(acset[['featdata']], refcount_swapped, altcount_swapped, acset[['phenodata']])
-
-    return(acset_rnd)
-}
-
-rgt <- function(acset){
-###Some cells may have low read counts, thereby being enriched for NA's. Similarly, they may have high expression, enriching for biallelic calls, so don't permute those.
-###Currently permutation within the whole table is done, not such that row- or col-margins are fixed.
-    
-    gt = acset[['gt']]
-
-    perm.ind = which(gt == 2 | gt == 0)
-    nels = length(perm.ind)
-    perm.sampled.ind = sample(perm.ind)
-    gt[perm.ind] = gt[perm.sampled.ind]
-
-    acset[['gt']] = gt
-
-    return(acset)
 }
 
 set_gt_conc <- function(acset){

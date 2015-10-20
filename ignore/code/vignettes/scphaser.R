@@ -82,10 +82,10 @@ acset = phase(acset, input = 'ac', weigh = FALSE, method = 'cluster')
 acset = phase(acset, input = 'ac', weigh = TRUE, method = 'exhaust')
 acset = phase(acset, input = 'ac', weigh = TRUE, method = 'cluster')
 
-acset = phase(acset, input = 'gt', weigh = FALSE, method = 'exhaust')
-acset = phase(acset, input = 'gt', weigh = FALSE, method = 'cluster')
 acset = phase(acset, input = 'gt', weigh = TRUE, method = 'exhaust')
 acset = phase(acset, input = 'gt', weigh = TRUE, method = 'cluster')
+acset = phase(acset, input = 'gt', weigh = FALSE, method = 'exhaust')
+acset = phase(acset, input = 'gt', weigh = FALSE, method = 'cluster')
 
 lapply(acset, dim)
 
@@ -95,6 +95,16 @@ length(acset[['varflip']])
 ##scores
 length(unique(acset[['featdata']][, 'feat']))
 length(unique(acset[['score']]))
+
+
+## /*
+##******************
+## */
+##' ##P-value of phasing
+##+
+nperm = 100
+pval = get_phase_pval(acset, nperm)
+print(pval)
 
 
 ## /*

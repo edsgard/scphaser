@@ -25,7 +25,6 @@ phase <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nvars_m
     ##loop features
     verbose = R.utils::Verbose(threshold = verbosity)
     R.utils::cat(verbose, '\nPhasing...\n')
-    ##progbar = txtProgressBar(min = 0, max = nfeats, style = 3)
     for(jfeat_it in 1:nfeats){
 
         ##subset on vars in jfeat
@@ -39,7 +38,6 @@ phase <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nvars_m
         ##store
         varflip[res[['vars2flip']]] = TRUE
         score[jfeat_it] = res[['stat']]
-        ##setTxtProgressBar(progbar, jfeat_it)
     }
     ##add newline
     R.utils::cat(verbose, '\n')
@@ -713,7 +711,7 @@ filter_nminvar <- function(acset, nmin_var = 2){
 ##TODO: testthat, identical rownames in all three objects
 ##TODO: testthat, identical colnames in count mats
 
-call_gt <- function(acset, min_acount = 3, fc = 50){
+call_gt <- function(acset, min_acount = 3, fc = 3){
 ###Simplistic genotype caller. Genotype callers often rely on DNA-specific assumptions.
 
     ##indexes of elements with expression

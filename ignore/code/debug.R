@@ -2,6 +2,65 @@
 
 check <- function(){
 
+    ##*###
+    ##p-value calc of tcell data with fixed rowsums gives lower p-values than if only fixing the table sum
+    ##*###
+    ##TBD: an issue specific to {gt, false, cluster}?
+    invisible(fakemouse)
+    featdata = fakemouse[['featdata']]
+    refcount = fakemouse[['refcount']]
+    altcount = fakemouse[['altcount']]
+    phenodata = fakemouse[['phenodata']]
+
+    acset = new_acset(featdata, refcount, altcount, phenodata)
+    lapply(acset, dim)
+    acset_rnd = racset(acset)
+    lapply(acset, dim)
+    nminvar = 2
+    acset = filter_nminvar(acset, nminvar)
+    lapply(acset, dim)
+    min_acount = 3
+    fc = 3
+    acset = call_gt(acset, min_acount, fc)
+    lapply(acset, dim)
+    acset = filter_nminmono(acset)
+    lapply(acset, dim)
+    nminvar = 2
+    acset = filter_nminvar(acset, nminvar)
+    lapply(acset, dim)
+
+    nperm = 100
+    acset = phase(acset, input = 'gt', weigh = FALSE, method = 'cluster')
+    pval.row_t = get_phase_pval(acset, nperm, fixedrowmargin = TRUE)
+    pval.row_f = get_phase_pval(acset, nperm, fixedrowmargin = FALSE)
+    length(which(pval.row_t > 0.99)) #125
+    length(which(pval.row_f > 0.99)) #176
+
+    nperm = 10
+    acset = phase(acset, input = 'gt', weigh = FALSE, method = 'exhaust')
+    pval.row_t = get_phase_pval(acset, nperm, fixedrowmargin = TRUE)
+    pval.row_f = get_phase_pval(acset, nperm, fixedrowmargin = FALSE)
+    length(which(pval.row_t > 0.99)) #170
+    length(which(pval.row_f > 0.99)) #178
+
+    
+    ##*###
+    ##randomization with fixedrowmargin = T, still reduces the number of monoallelic calls
+    ##*###
+    setdiff(ac.bak$featdata$feat, acset_rnd$featdata$feat)
+    featdata = ac.bak$featdata
+    vars = featdata[which(featdata[, 'feat'] == 'ABL2'), 'var']
+
+    gt = acset$gt
+    gt.rnd = ac.bak$gt
+    j.gt = gt[vars, ]
+    j.gt.rnd = gt.rnd[vars, ]
+    
+    j.gt[which(!is.na(j.gt))]
+    j.gt.rnd[which(!is.na(j.gt.rnd))]
+    ##second row only contains a single '2'
+    
+    
     ##meth = exhaust, input = ac, weigh = T
     ##slow when nvars: 15
     ##CDC27: nvars: 59
