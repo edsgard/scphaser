@@ -1,19 +1,14 @@
 
 
 \section{TODO}
-##Quality of phasing for each gene. 
-##add randomgt fcn to be able to calculate pval if no count data
-##pval: store filter and phasing parameters such that can reuse the same ones
-when calling the pvalue fcn.
-##Allow setting verbosity level (0 = quiet) to skip printing when
-calculating p-value
-##score for each variant (prop of diffs compared to varflip)
+##Test p-value calc on tcell data
+##Score for each variant (prop of diffs compared to gt_phased cell-wise majority vote)
 ##Real mouse data
 ##Test TPR and FPR on real mouse data
-##filter feats where all counts are zero in all its vars and cells
+##Filter feats where all counts are zero in all its vars and cells
 ##Error-checks (acset constructor). biallelic vars, data-frame, ...
 ##Error-check: In set_aseweights: double-check that ac exists.
-##rename fakemouse and colnames to tcell data
+##Rename fakemouse and colnames to tcell data
 ##synth_acset (allele counts)
 ##Test complexity
 ##Expand test-suite (/tests)

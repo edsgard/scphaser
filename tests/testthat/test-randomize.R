@@ -133,13 +133,12 @@ test_that('p-value calculation works', {
 
     ##params
     nminvar = 2
-
     input = 'gt'
     weigh = FALSE
     method = 'exhaust'
-    nvars_max = Inf
+    nvars_max = 10
     
-    nperm = 1000
+    nperm = 100
 
     ##preproc
     acset = filter_nminvar(acset, nminvar)
@@ -148,7 +147,7 @@ test_that('p-value calculation works', {
     acset = phase(acset, input, weigh, method, nvars_max)
     
     ##get p-value
-    pval = get_phase_pval(acset, input, weigh, method, nvars_max, nperm = 100, nminvar = 2, min_acount = 3, fc = 3)
+    pval = get_phase_pval(acset, nperm)
 
     
 })

@@ -12,7 +12,8 @@ License: GPL-3
 LazyData: true
 Imports:
     cluster,
-    Hmisc
+    Hmisc,
+    R.utils
 Suggests:
     testthat,
     knitr,

@@ -1,6 +1,6 @@
 
 
-phase <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nvars_max = 10){
+phase <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nvars_max = 10, verbosity = -1){
     
     ##feat2vars
     featdata = acset[['featdata']]
@@ -23,7 +23,8 @@ phase <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nvars_m
     }
     
     ##loop features
-    cat('Phasing...\n')
+    verbose = R.utils::Verbose(threshold = verbosity)
+    R.utils::cat(verbose, '\nPhasing...\n')
     ##progbar = txtProgressBar(min = 0, max = nfeats, style = 3)
     for(jfeat_it in 1:nfeats){
 
@@ -31,8 +32,6 @@ phase <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nvars_m
         jfeat = feats[jfeat_it]
         vars = feat2var_list[[jfeat]]
         jacset = subset_rows(acset, vars)
-
-        print(jfeat)
         
         ##phase single feat
         res = phase_feat(jacset, input, weigh, method, nvars_max)
@@ -43,14 +42,18 @@ phase <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nvars_m
         ##setTxtProgressBar(progbar, jfeat_it)
     }
     ##add newline
-    cat('\n')
+    R.utils::cat(verbose, '\n')
 
     ##store
     acset[['varflip']] = names(varflip)[which(varflip)]
     acset[['score']] = score
     
-    ##add to acset: gt matrix where varflip vars are phased to the complementary gentoype
+    ##store gt matrix where varflip vars are phased to the complementary gentoype
     acset = set_phased_gt(acset)
+
+    ##store phase arguments
+    args = list(input = input, weigh = weigh, method = method, nvars_max = nvars_max)
+    acset[['args']][['phase']][c('input', 'weigh', 'method', 'nvars_max')] = args
     
     return(acset)
 }
@@ -671,12 +674,15 @@ subset_rows <- function(acset, sel.ind){
     return(acset)
 }
 
-filter_nminmono <- function(acset, nminmono = 1){
-###filter variants having less than nminmono mono-allelic calls of each allele across samples
+filter_nminmono <- function(acset, nmin_mono = 1){
+###filter variants having less than nmin_mono mono-allelic calls of each allele across samples
     
     gt = acset[['gt']]
-    pass_vars = which(rowSums(gt == 0, na.rm = TRUE) >= nminmono & rowSums(gt == 2, na.rm = TRUE) >= nminmono)
+    pass_vars = which(rowSums(gt == 0, na.rm = TRUE) >= nmin_mono & rowSums(gt == 2, na.rm = TRUE) >= nmin_mono)
     acset = subset_rows(acset, pass_vars)
+
+    ##store filter argument
+    acset[['args']][['filter']]['nmin_mono'] = list(nmin_mono = nmin_mono)
 
     return(acset)
 }
@@ -699,6 +705,9 @@ filter_nminvar <- function(acset, nmin_var = 2){
     pass_var = acset[['featdata']][, 'var']
     acset = subset_rows(acset, pass_var)
 
+    ##store filter argument
+    acset[['args']][['filter']]['nmin_var'] = list(nmin_var = nmin_var)
+    
     return(acset)
 }
 ##TODO: testthat, identical rownames in all three objects
@@ -733,6 +742,9 @@ call_gt <- function(acset, min_acount = 3, fc = 50){
 
     ##set complementary genotype matrix
     acset = set_compl_gt(acset)
+
+    ##store filter argument
+    acset[['args']][['filter']][c('min_acount', 'fc')] = list(min_acount = min_acount, fc = fc)
 
     return(acset)
 }

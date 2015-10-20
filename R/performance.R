@@ -1,28 +1,41 @@
 
 
-get_phase_pval <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nvars_max = Inf, nperm = 100, nminvar = 2, min_acount = 3, fc = 3){
+get_phase_pval <- function(acset, nperm = 100){
 
     ac = !is.null(acset[['refcount']])
     nfeats = length(unique(acset[['featdata']][, 'feat']))
     nullscore = matrix(NA, nrow = nfeats, ncol = nperm)
+
+    ##get args
+    phaseargs = acset[['args']][['phase']]
+    input = phaseargs[['input']]
+    weigh = phaseargs[['weigh']]
+    method = phaseargs[['method']]
+    nvars_max = phaseargs[['nvars_max']]
+
+    filterargs = acset[['args']][['filter']]
+    nmin_var = filterargs[['nmin_var']]
+    min_acount = filterargs[['min_acount']]
+    fc = filterargs[['fc']]
     
+    ##
     for(jperm in 1:nperm){
         
         ##randomize
-        acset_rnd = racset(acset)
-
-        ##call gt
         if(ac){
-            acset_rnd = filter_nminvar(acset_rnd, nminvar)
+            acset_rnd = racset(acset, type = 'ac')
+            acset_rnd = filter_nminvar(acset_rnd, nmin_var)
             acset_rnd = call_gt(acset_rnd, min_acount, fc)
+        }else{
+            acset_rnd = racset(acset, type = 'gt')
         }
         
         ##preproc
         acset_rnd = filter_nminmono(acset_rnd)
-        acset_rnd = filter_nminvar(acset_rnd, nminvar)
+        acset_rnd = filter_nminvar(acset_rnd, nmin_var)
         
         ##phase
-        acset_rnd = phase(acset_rnd, input, weigh, method, nvars_max)
+        acset_rnd = phase(acset_rnd, input, weigh, method, nvars_max, verbosity = 0)
 
         ##get score
         nullscore[, jperm] = acset_rnd[['score']]
@@ -40,7 +53,7 @@ get_phase_pval <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust'
     
     ##
     for(jfeat in 1:nfeats){
-        pval[jfeat] = length(which(nullscore[jfeat, ] <= obsscore[jfeat])) / nperm
+        pval[jfeat] = (1 + length(which(nullscore[jfeat, ] <= obsscore[jfeat]))) / (nperm + 1)
     }
     
     return(pval)
@@ -110,7 +123,19 @@ plot_conc <- function(acset, feats = NA, cex = 0.5){
     
 }
 
-racset <- function(acset){
+racset <- function(acset, type = 'ac'){
+
+    if(type == 'ac'){
+        acset_rnd = rac(acset)
+    }
+    if(type == 'gt'){
+        acset_rnd = rgt(acset)
+    }    
+    
+    return(acset_rnd)
+}
+
+rac <- function(acset){
 ###Randomly swap half of the elements in the count matrices
 ###This keeps table sums of both counts and gts constant. However, row margins are not fixed.
 
@@ -127,7 +152,7 @@ racset <- function(acset){
     refcount_swapped[swap.ind] = altcount[swap.ind]
 
     acset_rnd = new_acset(acset[['featdata']], refcount_swapped, altcount_swapped, acset[['phenodata']])
-    
+
     return(acset_rnd)
 }
 
