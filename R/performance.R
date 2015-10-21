@@ -26,6 +26,58 @@ gtsynth_acset <- function(nvars, nalt_ofvars, ncells, notherhaplo_ofcells, percn
     return(acset)
 }
 
+score_var <- function(acset){
+###for each variant calculate the "distance" to a phased reference variant
+
+    gt = acset[['gt_phased']]
+    ##TODO: check if gt_phased exists
+
+    ##exclude columns with only NAs and/or 1s    
+    n_na = apply(gt, 2, function(jcell){length(which(is.na(jcell) | jcell == 1))})
+    ncells = ncol(gt)
+    keep_ind = which(n_na != ncells) 
+    gt = gt[, keep_ind]
+    
+    ##create reference variant from the most frequent gt within each cell
+    ref_var = apply(gt, 2, get_mostfreqgt)
+
+    ##get agreement btw vars and ref_var
+    nshared = apply(gt, 1, get_ngtshared, ref_var = ref_var)
+    fracshared = nshared / ncol(gt)
+
+    fracshared = t(fracshared)
+    
+    return(fracshared)
+}
+
+get_ngtshared <- function(jvar, ref_var){
+    
+    na_ind = which(is.na(jvar))
+    bi_ind = which(jvar == 1)
+    gt_ind = setdiff(1:length(jvar), na_ind)
+
+    shared = rep(0, 3)
+    names(shared) = c('gt', 'na', 'bi')
+    
+    shared['gt'] = length(which(jvar[gt_ind] == ref_var[gt_ind]))
+    shared['na'] = length(na_ind)
+    shared['bi'] = length(bi_ind)
+
+    return(shared)
+}
+
+get_mostfreqgt <- function(jcell){
+###Return the most frequent item, after removal of NAs.
+###Also, assume that 1's should be excluded.
+    
+    jcell = jcell[!(is.na(jcell) | jcell == 1)]
+    
+    gt2nvars = sort(table(jcell), decreasing = TRUE)
+    mostfreq = names(gt2nvars)[1];
+
+    return(mostfreq)
+}
+
 get_phase_pval <- function(acset, nperm = 100, fixedrowmargin = TRUE){
 
     ac = !is.null(acset[['refcount']])
@@ -41,7 +93,6 @@ get_phase_pval <- function(acset, nperm = 100, fixedrowmargin = TRUE){
     method = phaseargs[['method']]
     nvars_max = phaseargs[['nvars_max']]
     filterargs = acset[['args']][['filter']]
-    nmin_var = filterargs[['nmin_var']]
     min_acount = filterargs[['min_acount']]
     fc = filterargs[['fc']]
 
@@ -55,16 +106,11 @@ get_phase_pval <- function(acset, nperm = 100, fixedrowmargin = TRUE){
         ##randomize
         if(ac){
             acset_rnd = racset(acset, type = 'ac', fixedrowmargin = fixedrowmargin)
-            acset_rnd = filter_nminvar(acset_rnd, nmin_var)
             acset_rnd = call_gt(acset_rnd, min_acount, fc)
         }else{
             acset_rnd = racset(acset, type = 'gt', fixedrowmargin = fixedrowmargin)
         }
-        
-        ##preproc
-        acset_rnd = filter_nminmono(acset_rnd)
-        acset_rnd = filter_nminvar(acset_rnd, nmin_var)
-        
+                
         ##phase
         acset_rnd = phase(acset_rnd, input, weigh, method, nvars_max, verbosity = 0)
 

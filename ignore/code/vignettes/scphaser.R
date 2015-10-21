@@ -26,7 +26,7 @@ phenodata = fakemouse[['phenodata']]
 acset = new_acset(featdata, refcount, altcount, phenodata)
 lapply(acset, dim)
 
-##' Randomize original counts, before any filtering is done. This swaps half of the elements btw the ref and alt matrixes. The randomized dataset will be used below.
+##' Randomize original counts, before any filtering is done. The randomized dataset will be used below.
 ##+
 acset_rnd = racset(acset)
 lapply(acset, dim)
@@ -50,25 +50,6 @@ lapply(acset, dim)
 min_acount = 3
 fc = 3
 acset = call_gt(acset, min_acount, fc)
-lapply(acset, dim)
-
-
-## /*
-##******************
-## */
-##' ##Filter variants with no presence of both mono-allelic call
-##+
-acset = filter_nminmono(acset)
-lapply(acset, dim)
-
-
-## /*
-##******************
-## */
-##' ##Filter on at least n variants per feature
-##+
-nminvar = 2
-acset = filter_nminvar(acset, nminvar)
 lapply(acset, dim)
 
 
@@ -131,8 +112,6 @@ acset$gt_phased_conc$notconc$feat2ncell
 ##+
 acset_rnd = filter_nminvar(acset_rnd, nminvar)
 acset_rnd = call_gt(acset_rnd, min_acount, fc)
-acset_rnd = filter_nminmono(acset_rnd)
-acset_rnd = filter_nminvar(acset_rnd, nminvar)
 acset_rnd = phase(acset_rnd)
 
 ##gt concordance before and after phasing
