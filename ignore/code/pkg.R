@@ -55,18 +55,18 @@ main <- function(){
     ##Test vignette
     ##*##
     ##spin
-    knitr::spin('code/vignettes/test.R', knit = FALSE)    
+    knitr::spin('ignore/code/vignettes/test.R', knit = FALSE)    
     
     ##add meta header
-    file.copy('code/vignettes/meta.Rmd', 'vignettes/meta.Rmd')
-    file.append('vignettes/meta.Rmd', 'code/vignettes/test.Rmd')
+    file.copy('ignore/code/vignettes/meta.Rmd', 'vignettes/meta.Rmd')
+    file.append('vignettes/meta.Rmd', 'ignore/code/vignettes/test.Rmd')
     file.rename('vignettes/meta.Rmd', 'vignettes/test.Rmd')
 
     ##*##
     ##scphaser vignette
     ##*##
     ##spin
-    knitr::spin('ignore/code/vignettes/scphaser.R', knit = FALSE)    
+    knitr::spin('ignore/code/vignettes/scphaser.R', knit = FALSE, format = 'Rmd', precious = TRUE)    
     
     ##add meta header
     file.copy('ignore/code/vignettes/meta.Rmd', 'vignettes/meta.Rmd')

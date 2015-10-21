@@ -38,10 +38,10 @@ featdata = featdata[pass.ind, ]
 rownames(featdata) = featdata[, 'var']
 
 ##store in list
-fakemouse = list(featdata = featdata, phenodata = phenodata, refcount = ref.counts, altcount = alt.counts)
+humantcell = list(featdata = featdata, phenodata = phenodata, refcount = ref.counts, altcount = alt.counts)
 
 ##dump
-devtools::use_data(fakemouse)
+devtools::use_data(humantcell)
 
 ##check compression algorithm
 tools::checkRdaFiles('data')

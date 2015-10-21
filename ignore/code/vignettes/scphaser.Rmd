@@ -6,16 +6,16 @@ Create an "acset" data-structure. An acset is a list that at a minimum contains 
 - refcount: A matrix with allelic counts for the reference allele. The rownames have to match the values in the "var" column in the featdata, and the colnames the values in the phenodata "sample" column.
 - altcount: A matrix with allelic counts for the alternative allele, with the same row- and col-names as refcount.
 
-As part of this package a dataset with synthetic allele counts are provided, called "fakemouse". The dataset is a list containing the four required data-structures to create an "acset".
+As part of this package a dataset with allele counts from human T-cells are provided, called "humantcell". The dataset is a list containing the four required data-structures to create an "acset".
 
 ```{r }
-##Extract data-structures from the fakemouse list
+##Extract data-structures from the humantcell list
 library('scphaser')
-invisible(fakemouse)
-featdata = fakemouse[['featdata']]
-refcount = fakemouse[['refcount']]
-altcount = fakemouse[['altcount']]
-phenodata = fakemouse[['phenodata']]
+invisible(humantcell)
+featdata = humantcell[['featdata']]
+refcount = humantcell[['refcount']]
+altcount = humantcell[['altcount']]
+phenodata = humantcell[['phenodata']]
 ```
 
 Create an "acset" data-structure
