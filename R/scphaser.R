@@ -596,6 +596,8 @@ new_acset <- function(featdata, refcount = NA, altcount = NA, phenodata = NA, gt
         acset = list(featdata = featdata, phenodata = phenodata, refcount = refcount, altcount = altcount)
     }
 
+    ##check: featdata has columns named: 'var', 'feat'
+    ##phenodata has column named: 'sample'
     ##errorcheck that featdata[, 'var'] and featdata[, 'feat'] is character
     ##TODO: errorcheck that input featdata and phenodata are dataframes
     ##TODO: check that either refcount and altcount provided and not gt, OR, gt and none of the count matrices
@@ -693,7 +695,7 @@ call_gt <- function(acset, min_acount = 3, fc = 3){
 
     ##Genotype matrix
     feats = acset[['featdata']][, 'var']
-    samples = acset[['phenodata']][, 'sample']
+    samples = colnames(acset[['refcount']])
     gt = matrix(data = NA, nrow = length(feats), ncol = length(samples), dimnames = list(feats, samples))
     gt[r.mono.ind] = 0
     gt[bi.ind] = 1

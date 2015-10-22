@@ -78,7 +78,7 @@ get_mostfreqgt <- function(jcell){
     return(mostfreq)
 }
 
-get_phase_pval <- function(acset, nperm = 100, fixedrowmargin = TRUE){
+get_phase_pval <- function(acset, nperm = 100, fixedrowmargin = FALSE){
 
     ac = !is.null(acset[['refcount']])
     feats = unique(acset[['featdata']][, 'feat'])
@@ -140,7 +140,7 @@ get_phase_pval <- function(acset, nperm = 100, fixedrowmargin = TRUE){
     return(pval)
 }
 
-racset <- function(acset, type = 'ac', fixedrowmargin = TRUE){
+racset <- function(acset, type = 'ac', fixedrowmargin = FALSE){
 
     if(type == 'ac'){
         acset_rnd = rac(acset, fixedrowmargin)
@@ -152,7 +152,7 @@ racset <- function(acset, type = 'ac', fixedrowmargin = TRUE){
     return(acset_rnd)
 }
 
-rac <- function(acset, fixedrowmargin = TRUE){
+rac <- function(acset, fixedrowmargin = FALSE){
 
     altcount = acset[['altcount']]
     refcount = acset[['refcount']]
@@ -187,7 +187,7 @@ rac <- function(acset, fixedrowmargin = TRUE){
     return(acset_rnd)
 }
 
-rgt <- function(acset, fixedrowmargin = TRUE){
+rgt <- function(acset, fixedrowmargin = FALSE){
 ###Some cells may have low read counts, thereby being enriched for NA's. Similarly, they may have high expression, enriching for biallelic calls (gt==1), so not permuting those elements.
     
     gt = acset[['gt']]

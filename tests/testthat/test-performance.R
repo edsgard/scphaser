@@ -397,8 +397,6 @@ test_that('variant score calculation works', {
     nvars_max = 10
     verbosity = 0
     
-    nperm = 100
-
     ##preproc
     acset = filter_nminvar(acset, nminvar)
     
