@@ -35,23 +35,33 @@ main <- function(data_list){
     altcount = data_list[['cast']]
     rownames(refcount) = featdata[, 'var']
     rownames(altcount) = featdata[, 'var']
+    acset = list(featdata = featdata, refcount = refcount, altcount = altcount)    
+
+    ##filter vars on expression in at least n cells
+    ncells = 1
+    mincount = 3
+    acset = filter_var_mincount(acset, mincount, ncells)
 
     ##filter feats on number of vars
-    ##get n variants per feature
-    feat2nvar = table(featdata[, 'feat'])
-
-    ##get passed feats
     nmin_var = 2
-    pass_feat = names(feat2nvar)[which(feat2nvar >= nmin_var)]
-    length(pass_feat)
-    length(unique(featdata[, 'feat']))
-
-    acset = list(featdata = featdata, refcount = refcount, altcount = altcount)
-    acset = filter_feat(acset, pass_feat)
-        
-    ##filter feats on sum of counts across all vars and cells (minimum example: 2 vars, 2 cells)
+    acset = filter_feat_nminvar(acset, nmin_var)
+                
+    ##filter feats on counts. Require feat to have at least two vars that have expression in at least three cells, among cells that express at least two vars.
     mincount = 3
-    acset = filter_featcount(acset, mincount)
+    ncells = 3
+    acset = filter_feat_counts(acset, mincount, ncells)
+        
+    ##filter feats on gt. Require feat to have at least two vars that have monoallelic calls in at least three cells, among cells that have at least two vars with monoallelic calls.
+    ncells = 3
+    acset = call_gt(acset)
+    acset = filter_feat_gt(acset, ncells)
+    
+    ##filter genes with variants on different chromosomes
+    featdata = acset[['featdata']]
+    feat2chr = tapply(featdata[, 'chr'], featdata[, 'feat'], table)
+    feat2nchr = unlist(lapply(feat2chr, length))
+    pass_feat = names(feat2nchr)[which(feat2nchr == 1)]
+    acset = subset_feat(acset, pass_feat)
     
     
     ##*###
@@ -79,59 +89,18 @@ main <- function(data_list){
     ##Dump
     ##*###
     ##store in list
-    mousehybrid = c(acset, list(phenodata = pheno))
+    mousehybrid = c(acset[c('featdata', 'refcount', 'altcount')], list(phenodata = pheno))
 
     ##dump
     save(mousehybrid, file = '../nogit/data/mousehybrid/mousehybrid.rda')
+
     
-    ##TODO: dump only one chr in pkg (since maximum 1M)
-    devtools::use_data(mousehybrid_chr1)
+    ##Dump only 300 genes to package, since max size of data in Bioconductor pkg is 1M
+    ngenes = 300
+    featdata = mousehybrid$featdata
+    feat2var = tapply(featdata$var, featdata$feat, unique)
+    sel_vars = unlist(feat2var[1:ngenes])
+    mousehybrid = subset_rows(mousehybrid, sel_vars)
     
-}
-
-filter_featcount <- function(acset, mincount){
-
-    featdata = acset[['featdata']]
-    refcount = acset[['refcount']]
-    altcount = acset[['altcount']]
-    
-    feat2var = tapply(featdata[, 'var'], featdata[, 'feat'], unique)
-
-    ##set na to 0
-    refcount[is.na(refcount)] = 0
-    altcount[is.na(altcount)] = 0
-    totcount = refcount + altcount
-
-    ##counts per feat
-    var2count = apply(totcount, 1, sum)
-    length(which(var2count == 0))
-    feat2count = unlist(lapply(feat2var, function(vars, counts){sum(counts[vars, ])}, counts = totcount))
-    ##TBD: slow, consider using dplyr
-    pass_feat = names(feat2count)[which(feat2count > mincount)]
-
-    ##filter on feats
-    acset = filter_feat(acset, pass_feat)
-
-    return(acset)
-}
-
-filter_feat <- function(acset, pass_feat){
-
-    featdata = acset[['featdata']]
-    refcount = acset[['refcount']]
-    
-    ##subset featdata on passed feats to get passed variants
-    featdata = merge(featdata, as.matrix(pass_feat), by.x = 'feat', by.y = 1, stringsAsFactors = FALSE)
-    rownames(featdata) = featdata[, 'var']
-
-    ##subset on passed vars
-    pass_var = featdata[, 'var']
-    refcount = refcount[pass_var, ]
-    altcount = altcount[pass_var, ]
-
-    acset[['featdata']] = featdata
-    acset[['refcount']] = refcount
-    acset[['altcount']] = altcount
-
-    return(acset)
+    devtools::use_data(mousehybrid, overwrite = T)    
 }

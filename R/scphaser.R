@@ -25,13 +25,16 @@ phase <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nvars_m
     ##loop features
     verbose = R.utils::Verbose(threshold = verbosity)
     R.utils::cat(verbose, '\nPhasing...\n')
+    progbar = txtProgressBar(min = 0, max = nfeats, style = 3)
     for(jfeat_it in 1:nfeats){
 
+        setTxtProgressBar(progbar, jfeat_it)
+        
         ##subset on vars in jfeat
         jfeat = feats[jfeat_it]
         vars = feat2var_list[[jfeat]]
         jacset = subset_rows(acset, vars)
-        
+
         ##phase single feat
         res = phase_feat(jacset, input, weigh, method, nvars_max)
 
@@ -482,6 +485,26 @@ wphase_exhaust_ase <- function(acset, vars){
     return(list(vars2flip = vars2flip, stat = min_var))
 }
 
+get_var_gt_mat <- function(acset){
+    
+    ##feat2vars
+    featdata = acset[['featdata']]
+    feat2var_list = tapply(featdata[, 'var'], featdata[, 'feat'], unique)
+
+    ##loop feats    
+    feats = names(feat2var_list)
+    score = rep(NA, length(feats))
+    names(score) = feats
+    gt = acset[['gt']]
+    for(jfeat in feats){
+        vars = featdata[which(featdata[, 'feat'] == jfeat), 'var']
+        jgt = gt[vars, ]
+        score[jfeat] = get_var_gt(jgt)
+    }
+
+    return(score)
+}
+
 get_var_gt <- function(gt){
     ##TBD: this also counts elements where only a monoallelic call in a single var. Should be ok, since that number is invariant to a complement shift.
     compactness = sum(abs(colSums(gt == 0, na.rm = TRUE) - colSums(gt == 2, na.rm = TRUE)))
@@ -606,7 +629,7 @@ new_acset <- function(featdata, refcount = NA, altcount = NA, phenodata = NA, gt
     ##TODO: errorcheck featdata rownames identical to count matrixes rownames
     ##TODO: errorcheck phenodata rownames identical to count matrixes colnames
     ##TODO: errorcheck that vars and feats has no NA values.
-    
+    ##if gt provided: check that 0, 1, 2.
     return(acset)
 }
 
@@ -650,7 +673,112 @@ subset_rows <- function(acset, sel.ind){
     return(acset)
 }
 
-filter_nminvar <- function(acset, nmin_var = 2){
+subset_feat <- function(acset, pass_feat){
+
+    featdata = acset[['featdata']]
+    
+    ##subset featdata on passed feats to get passed variants
+    featdata = merge(featdata, as.matrix(pass_feat), by.x = 'feat', by.y = 1, stringsAsFactors = FALSE)
+    rownames(featdata) = featdata[, 'var']
+
+    ##subset on passed vars
+    pass_var = featdata[, 'var']
+    acset = subset_rows(acset, pass_var)
+
+    return(acset)
+}
+
+filter_feat_counts <- function(acset, mincount = 3, ncells = 3){
+    
+    totcount = acset$refcount + acset$altcount
+    featdata = acset$featdata
+
+    ##loop feats
+    feat2vars = tapply(featdata[, 'var'], featdata[, 'feat'], unique)
+    feat_pass = unlist(lapply(feat2vars, function(jvars, totcount, mincount, ncells){
+        totcount = totcount[jvars, ]
+        pass_feat = filter_singlefeat_count(totcount, mincount, ncells)
+        return(pass_feat)
+    }, totcount, mincount, ncells))
+    feat_pass = names(feat_pass)[which(feat_pass)]    
+    
+    acset = subset_feat(acset, feat_pass)
+
+    return(acset)
+}
+
+filter_singlefeat_count <- function(totcount, mincount = 3, ncells = 3){
+    
+    ##filter cells, requring that a cell should have at least two vars with expression.
+    cell2nvars = apply(totcount, 2, function(jcell, mincount){length(which(jcell >= mincount))}, mincount)
+    pass_cells = names(cell2nvars)[which(cell2nvars >= 2)]
+
+    if(length(pass_cells) >= ncells){
+        totcount = totcount[, pass_cells]
+        
+        ##filter vars. Require at least n cells with expression
+        var2ncells = apply(totcount, 1, function(jvar, mincount){length(which(jvar >= mincount))}, mincount)
+        pass_var = names(var2ncells)[which(var2ncells >= ncells)]
+
+        ##At least 2 vars
+        if(length(pass_var) >= 2){
+            pass_feat = TRUE
+        }else{
+            pass_feat = FALSE
+        }
+    }else{
+        pass_feat = FALSE
+    }
+    
+    return(pass_feat)
+}
+
+filter_feat_gt <- function(acset, ncells = 3){
+    
+    gt = acset$gt
+    featdata = acset$featdata
+
+    ##loop feats
+    feat2vars = tapply(featdata[, 'var'], featdata[, 'feat'], unique)
+    feat_pass = unlist(lapply(feat2vars, function(jvars, gt, ncells){
+        gt = gt[jvars, ]
+        pass_feat = filter_singlefeat_gt(gt, ncells)
+        return(pass_feat)
+    }, gt, ncells))
+    feat_pass = names(feat_pass)[which(feat_pass)]    
+    
+    acset = subset_feat(acset, feat_pass)
+
+    return(acset)
+}
+
+filter_singlefeat_gt <- function(gt, ncells = 3){
+    
+    ##filter cells, requring that a cell should have at least two vars with monoallelic calls.
+    cell2nvars = apply(gt, 2, function(jcell){length(which(jcell == 0 | jcell == 2))})
+    pass_cells = names(cell2nvars)[which(cell2nvars >= 2)]
+
+    if(length(pass_cells) >= ncells){
+        gt = gt[, pass_cells]
+        
+        ##filter vars. Require at least n cells with monoallelic calls
+        var2ncells = apply(gt, 1, function(jvar){length(which(jvar == 0 | jvar == 2))})
+        pass_var = names(var2ncells)[which(var2ncells >= ncells)]
+
+        ##At least 2 vars
+        if(length(pass_var) >= 2){
+            pass_feat = TRUE
+        }else{
+            pass_feat = FALSE
+        }
+    }else{
+        pass_feat = FALSE
+    }
+    
+    return(pass_feat)
+}
+
+filter_feat_nminvar <- function(acset, nmin_var = 2){
 ###Filter on minimum number of variants present in feature
     
     ##get n variants per feature
@@ -659,20 +787,25 @@ filter_nminvar <- function(acset, nmin_var = 2){
     ##get passed feats
     pass_feat = names(feat2nvar)[which(feat2nvar >= nmin_var)]
 
-    ##subset featdata on passed feats to get passed variants
-    featdata = merge(acset[['featdata']], as.matrix(pass_feat), by.x = 'feat', by.y = 1, stringsAsFactors = FALSE)
-    rownames(featdata) = featdata[, 'var']
-    acset[['featdata']] = featdata
-    
-    ##subset on passed vars
-    pass_var = acset[['featdata']][, 'var']
-    acset = subset_rows(acset, pass_var)
+    ##subset on passed feats
+    acset = subset_feat(acset, pass_feat)
 
     ##store filter argument
     acset[['args']][['filter']]['nmin_var'] = list(nmin_var = nmin_var)
     
     return(acset)
 }
+
+filter_var_mincount <- function(acset, mincount = 3, ncells = 1){
+##Filter vars on expression in at least ncells    
+    totcount = acset$refcount + acset$altcount
+    var2ncells = apply(totcount, 1, function(jvar, mincount){length(which(jvar >= mincount))}, mincount)
+    pass_vars = names(var2ncells)[which(var2ncells >= ncells)]
+    acset = subset_rows(acset, pass_vars)
+
+    return(acset)
+}
+
 ##TODO: testthat, identical rownames in all three objects
 ##TODO: testthat, identical colnames in count mats
 
