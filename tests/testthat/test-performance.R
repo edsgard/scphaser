@@ -298,7 +298,7 @@ test_that('p-value calculation works', {
     nperm = 100
 
     ##preproc
-    acset = filter_nminvar(acset, nminvar)
+    acset = filter_feat_nminvar(acset, nminvar)
     
     ##phase
     acset = phase(acset, input, weigh, method, nvars_max, verbosity)
@@ -323,7 +323,7 @@ test_that('p-value calculation works', {
     nperm = 100
 
     ##preproc
-    acset = filter_nminvar(acset, nminvar)
+    acset = filter_feat_nminvar(acset, nminvar)
     
     ##phase
     acset = phase(acset, input, weigh, method, nvars_max, verbosity)
@@ -398,7 +398,7 @@ test_that('variant score calculation works', {
     verbosity = 0
     
     ##preproc
-    acset = filter_nminvar(acset, nminvar)
+    acset = filter_feat_nminvar(acset, nminvar)
     
     ##phase
     acset = phase(acset, input, weigh, method, nvars_max, verbosity)
