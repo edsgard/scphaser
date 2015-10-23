@@ -26,8 +26,9 @@ main <- function(){
     acset_sub = phase(acset_sub, input = 'gt', weigh = FALSE, method = 'exhaust')
 
     ##nothing should be flipped:
-    dim(acset_sub$featdata) #11521
-    length(acset_sub$varflip) #139 vars
+    nvars = length(acset_sub$featdata$var) #11521
+    nvar_flipped = length(acset_sub$varflip) #139 vars
+    nvars / nvar_flipped #1.2%
 
     
     ##*###
@@ -35,13 +36,13 @@ main <- function(){
     ##*###
     acset = phase(acset, input = 'gt', weigh = FALSE, method = 'exhaust')
     
-    ##FPR at variant level
+    ##"FPR" at variant level
     featdata = acset$featdata
     nvars = length(featdata$var) ##167443
     nvar_flipped = length(acset$varflip) ##2034
-    nvar_flipped / nvars ##1.2%
+    nvar_flipped / nvars #1.2%
 
-    ##FPR at feat level
+    ##"FPR" at feat level
     featdata = acset$featdata
     nfeats_flipped = length(unique(featdata[acset$varflip, 'feat']))
     nfeats = length(unique(featdata$feat))
@@ -50,11 +51,16 @@ main <- function(){
     ##gene score before phasing
     score_prephasing = get_var_gt_mat(acset_sub)
 
+
     
-    ##*###
+    ##*###########################
     ##FPR and TPR
-    ##*###    
-    ##flip some variants (true cases) and check if refinds them
+    ##*###########################
+    ##flip some variants (true cases) and check if we can phase them
+
+    ##*###
+    ##Create synth data where truth is known
+    ##*##
 
     ##Synth data
     featdata = acset$featdata
@@ -79,8 +85,10 @@ main <- function(){
 
 
     ##*###
-    ##Set observed flips to the flip-set closest to exp or exp_compl
+    ##Set observed flips to the complement if closer to exp_compl
     ##*###
+
+    ##binarize vars known to be flipped (expected)
     vars_flip_bin = as.integer(vars %in% vars_flip)
     varsflip_exp = cbind(vars, featdata[vars, 'feat'], vars_flip_bin)
     colnames(varsflip_exp) = c('var', 'feat', 'exp')
@@ -88,7 +96,7 @@ main <- function(){
     rownames(varsflip) = varsflip[, 'var']
     varsflip[, 'exp'] = as.integer(varsflip[, 'exp'])
     
-    ##add compl
+    ##add complement of expected flip
     exp_compl = varsflip[, 'exp']
     exp_compl[varsflip[, 'exp'] == 0] = 1
     exp_compl[varsflip[, 'exp'] == 1] = 0
@@ -102,7 +110,7 @@ main <- function(){
     obs = as.integer(varsflip[, 'var'] %in% obs_vars)
     varsflip = cbind(varsflip, obs)
 
-    ##hamming distance of obs to both exp and exp_compl, within each feat
+    ##set the adjusted observed flip-vector to the complementary of obs, if obs is closer to exp_compl
     feat2vars = tapply(varsflip[, 'var'], varsflip[, 'feat'], unique)
     varsflip_list = lapply(feat2vars, function(vars, varsflip){
         jflip = varsflip[vars, ]
@@ -122,6 +130,9 @@ main <- function(){
     rownames(varsflip) = varsflip[, 'var']
 
     
+    ##*###
+    ##FPR and TPR
+    ##*###
     n_true = sum(varsflip[, 'exp']) #5719
     n_pos = sum(varsflip[, 'obs_adj']) #5238
     varsflip_pos = varsflip[which(varsflip[, 'obs_adj'] == 1), ]
