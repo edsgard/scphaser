@@ -57,19 +57,15 @@ main <- function(){
     nvar_flipped / nvars #1.2%    
 
     ##*###
-    ##FPR and TPR
+    ##Performance
     ##*###
     ##flip some variants (true cases) and check if we can phase them
 
-    ##*###
     ##Create synthetic data where truth is known
-    ##*##
     nfracflip = 0.5
     synt_res = synt_flip(acset_sub$featdata, acset_sub$gt, nfracflip)
     
-    ##*###
     ##Get performance
-    ##*###
     varsflip = synt_res[['varsflip']]
     perf = get_performance(varsflip, acset_sub$featdata)
     
@@ -83,6 +79,7 @@ main <- function(){
     fracofconsensus = varscores[, 'gt'] / maxfrac
     summary(fracofconsensus)
 
+    
 
     ##*#########################
     ##Harder filters
@@ -113,9 +110,10 @@ main <- function(){
     acset = filter_feat_nminvar(acset, nminvar)
     lapply(acset, dim) #2343
     length(unique(acset$featdata$feat)) #299
-        
+
+    
     ##*###
-    ##Get performance
+    ##Performance
     ##*###
 
     ##Create synthetic data where truth is known
