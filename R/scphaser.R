@@ -796,6 +796,44 @@ filter_feat_nminvar <- function(acset, nmin_var = 2){
     return(acset)
 }
 
+filter_var_gt <- function(acset, ncells = 3){
+    
+    gt = acset$gt
+    featdata = acset$featdata
+
+    ##loop feats
+    feat2vars = tapply(featdata[, 'var'], featdata[, 'feat'], unique)
+    var_pass = unlist(lapply(feat2vars, function(jvars, gt, ncells){
+        gt = gt[jvars, ]
+        pass_var = filter_var_singlefeat_gt(gt, ncells)
+        return(pass_var)
+    }, gt, ncells))
+    
+    acset = subset_rows(acset, var_pass)
+
+    return(acset)
+}
+
+filter_var_singlefeat_gt <- function(gt, ncells = 3){
+    
+    ##filter cells, requring that a cell should have at least two vars with monoallelic calls.
+    cell2nvars = apply(gt, 2, function(jcell){length(which(jcell == 0 | jcell == 2))})
+    pass_cells = names(cell2nvars)[which(cell2nvars >= 2)]
+
+    if(length(pass_cells) >= ncells){
+        gt = gt[, pass_cells]
+        
+        ##filter vars. Require at least n cells with monoallelic calls
+        var2ncells = apply(gt, 1, function(jvar){length(which(jvar == 0 | jvar == 2))})
+        pass_var = names(var2ncells)[which(var2ncells >= ncells)]
+
+    }else{
+        pass_var = NULL
+    }
+    
+    return(pass_var)
+}
+
 filter_var_mincount <- function(acset, mincount = 3, ncells = 1){
 ##Filter vars on expression in at least ncells    
     totcount = acset$refcount + acset$altcount
