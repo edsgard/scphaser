@@ -38,7 +38,7 @@ lapply(acset, dim)
 ##' ## Filter on at least n variants per feature
 ##+
 nminvar = 2
-acset = filter_nminvar(acset, nminvar)
+acset = filter_feat_nminvar(acset, nminvar)
 lapply(acset, dim)
 
 
@@ -58,15 +58,15 @@ lapply(acset, dim)
 ## */
 ##' ##Phase
 ##+
-acset = phase(acset, input = 'ac', weigh = FALSE, method = 'exhaust')
-acset = phase(acset, input = 'ac', weigh = FALSE, method = 'cluster')
-acset = phase(acset, input = 'ac', weigh = TRUE, method = 'exhaust')
-acset = phase(acset, input = 'ac', weigh = TRUE, method = 'cluster')
+##acset = phase(acset, input = 'ac', weigh = FALSE, method = 'exhaust')
+##acset = phase(acset, input = 'ac', weigh = FALSE, method = 'cluster')
+##acset = phase(acset, input = 'ac', weigh = TRUE, method = 'exhaust')
+##acset = phase(acset, input = 'ac', weigh = TRUE, method = 'cluster')
 
-acset = phase(acset, input = 'gt', weigh = TRUE, method = 'exhaust')
-acset = phase(acset, input = 'gt', weigh = TRUE, method = 'cluster')
+##acset = phase(acset, input = 'gt', weigh = TRUE, method = 'exhaust')
+##acset = phase(acset, input = 'gt', weigh = TRUE, method = 'cluster')
 acset = phase(acset, input = 'gt', weigh = FALSE, method = 'exhaust')
-acset = phase(acset, input = 'gt', weigh = FALSE, method = 'cluster')
+##acset = phase(acset, input = 'gt', weigh = FALSE, method = 'cluster')
 
 lapply(acset, dim)
 
@@ -83,7 +83,7 @@ length(unique(acset[['score']]))
 ## */
 ##' ##P-value of phasing
 ##+
-nperm = 100
+nperm = 10
 pval = get_phase_pval(acset, nperm)
 print(pval)
 
@@ -110,7 +110,7 @@ acset$gt_phased_conc$notconc$feat2ncell
 ## */
 ##' ## Phasing of a randomized genotype matrix
 ##+
-acset_rnd = filter_nminvar(acset_rnd, nminvar)
+acset_rnd = filter_feat_nminvar(acset_rnd, nminvar)
 acset_rnd = call_gt(acset_rnd, min_acount, fc)
 acset_rnd = phase(acset_rnd)
 

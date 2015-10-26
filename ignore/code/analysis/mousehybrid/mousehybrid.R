@@ -118,12 +118,16 @@ main <- function(){
 
     ##Create synthetic data where truth is known
     nfracflip = 0.5
-    synt_res = synt_flip(acset$featdata, acset$gt, nfracflip)
+    input = 'gt' ##'ac'
+    weigh = FALSE ##TRUE
+    method = 'exhaust' ##'cluster'
+    synt_res = synt_flip(acset$featdata, acset$gt, nfracflip, input, weigh, method)
 
     ##performance
     varsflip = synt_res[['varsflip']]
     perf = get_performance(varsflip, acset$featdata)
 
+    ##MCC: 
     ##FPR: 1.5%
     ##TPR: 97.6%
     ##nfeats_id: 282 / 299 genes
@@ -138,7 +142,7 @@ subset_chr <- function(acset, chr){
     return(acset_sub)
 }
 
-synt_flip <- function(featdata, gt, nfracflip){
+synt_flip <- function(featdata, gt, nfracflip, input, weigh, method){
 ##start with gt where all vars are initially phased (no vars should be flipped)
 ##then randomly flip nfracflip variants
     
@@ -154,7 +158,7 @@ synt_flip <- function(featdata, gt, nfracflip){
     acset_synt = new_acset(featdata = featdata, gt = gt)
 
     ##phase
-    acset_synt = phase(acset_synt, input = 'gt', weigh = FALSE, method = 'exhaust')
+    acset_synt = phase(acset_synt, input = input, weigh = weigh, method = method)
 
     
     ##*###
@@ -208,14 +212,22 @@ synt_flip <- function(featdata, gt, nfracflip){
 
 get_performance <- function(varsflip, featdata){
     
-    n_true = sum(varsflip[, 'exp']) #5719
-    n_pos = sum(varsflip[, 'obs_adj']) #5238
+    n_true = sum(varsflip[, 'exp'])
+    
+    varsflip_neg = varsflip[which(varsflip[, 'obs_adj'] == 0), ]
+    n_neg = nrow(varsflip_neg)
+    tn = length(which(varsflip_neg[, 'exp'] == 0))
+    fn = n_neg - tn
+    
     varsflip_pos = varsflip[which(varsflip[, 'obs_adj'] == 1), ]
-    n_tp = sum(varsflip_pos[, 'exp'])
-    n_fp = n_pos - n_tp
-    fpr = n_fp / n_pos #19.4%
-    tpr = n_tp / n_true #73.8%
-
+    n_pos = sum(varsflip[, 'obs_adj'])
+    tp = sum(varsflip_pos[, 'exp'])
+    fp = n_pos - tp
+    
+    fpr = fp / n_pos
+    tpr = tp / n_true
+    mcc = ((tp * tn) - (fp * fn)) / sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn))
+    
     ##check at feat-level, may be better.
     feat2vars = tapply(featdata[, 'var'], featdata[, 'feat'], unique)
     varsflip[, 'obs_adj'] = as.integer(varsflip[, 'obs_adj'])
@@ -227,8 +239,8 @@ get_performance <- function(varsflip, featdata){
     n_id = length(which(feat2correct)) #342
     nfeats = length(feat2vars) #691
 
-    var_perf = c(fpr, tpr, n_true, n_pos, n_tp, n_fp)
-    names(var_perf) = c('fpr', 'tpr', 'true', 'pos', 'tp', 'fp')
+    var_perf = c(mcc, fpr, tpr, n_true, n_pos, tp, fp, tn, fn)
+    names(var_perf) = c('mcc', 'fpr', 'tpr', 'true', 'pos', 'tp', 'fp', 'tn', 'fn')
     feat_perf = c(nfeats, n_id)
     names(feat_perf) = c('n_feats', 'n_identical')
     
