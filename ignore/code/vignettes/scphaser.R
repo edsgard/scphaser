@@ -26,11 +26,6 @@ phenodata = humantcell[['phenodata']]
 acset = new_acset(featdata, refcount, altcount, phenodata)
 lapply(acset, dim)
 
-##' Randomize original counts, before any filtering is done. The randomized dataset will be used below.
-##+
-acset_rnd = racset(acset)
-lapply(acset, dim)
-
 
 ## /*
 ##******************
@@ -51,6 +46,29 @@ min_acount = 3
 fc = 3
 acset = call_gt(acset, min_acount, fc)
 lapply(acset, dim)
+
+
+##' Randomize original counts. The randomized dataset will be used below.
+##+
+acset_rnd = racset(acset, type = 'gt')
+
+
+## /*
+##******************
+## */
+##' ## Filter variants on having at least n cells that have monoallelic calls in at least two variants within a feature
+##+
+
+##filter vars
+nmincells = 5
+acset = filter_var_gt(acset, nmincells)
+lapply(acset, dim)
+
+##filter feats
+nminvar = 2
+acset = filter_feat_nminvar(acset, nminvar)
+lapply(acset, dim)
+length(unique(acset$featdata$feat))
 
 
 ## /*
@@ -110,9 +128,20 @@ acset$gt_phased_conc$notconc$feat2ncell
 ## */
 ##' ## Phasing of a randomized genotype matrix
 ##+
+
+##filter vars
+nmincells = 5
+acset_rnd = filter_var_gt(acset_rnd, nmincells)
+lapply(acset_rnd, dim)
+
+##filter feats
+nminvar = 2
 acset_rnd = filter_feat_nminvar(acset_rnd, nminvar)
-acset_rnd = call_gt(acset_rnd, min_acount, fc)
-acset_rnd = phase(acset_rnd)
+lapply(acset_rnd, dim)
+length(unique(acset_rnd$featdata$feat))
+
+##phase
+acset_rnd = phase(acset_rnd, input = 'gt', weigh = FALSE, method = 'exhaust')
 
 ##gt concordance before and after phasing
 acset_rnd = set_gt_conc(acset_rnd)    
@@ -133,4 +162,3 @@ acset_rnd$gt_phased_conc$notconc$feat2ncell
 ##+ label, fig.show='hold',fig.cap='Genotype concordance between two variants within each gene.'
 plot_conc(acset)
 plot_conc(acset_rnd)
-

@@ -1,6 +1,6 @@
 
 
-phase <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nvars_max = 10, verbosity = -1){
+phase <- function(acset, input = 'gt', weigh = FALSE, method = 'exhaust', nvars_max = 10, verbosity = -1){
     
     ##feat2vars
     featdata = acset[['featdata']]
