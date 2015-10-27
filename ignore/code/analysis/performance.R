@@ -15,12 +15,12 @@ filter_get_perf <- function(acset, min_acount, fc, nmincells, input, weigh, meth
 
     ##filter vars
     acset = filter_var_gt(acset, nmincells)
-    lapply(acset, dim) #2370
+    lapply(acset, dim)
 
     ##filter feats
     acset = filter_feat_nminvar(acset, nminvar)
-    lapply(acset, dim) #2343
-    length(unique(acset$featdata$feat)) #299
+    lapply(acset, dim)
+    length(unique(acset$featdata$feat))
 
     
     ##*###

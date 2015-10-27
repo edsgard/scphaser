@@ -92,16 +92,16 @@ main <- function(){
 
 }
 
-plot_perf <- function(obs.long){
+plot_perf <- function(obs.long, your.x, your.colour, y.lab = 'MCC'){
 
     ##data and mappings
-    gg = ggplot(obs.long, aes_string(x = 'stage.finer', y = 'mcc', colour = 'EPI.PE.TE.finer', group = group.col))
+    gg = ggplot(obs.long, aes_string(x = 'min_acount', y = 'mcc', colour = your.colour, group = group.col))
 
     ##facet
-    gg = gg + facet_wrap(~gene.panel, scales = 'free_y', ncol = 1)
+    gg = gg + facet_grid(fc ~ nmincells, scales = 'free_y')
     
     ##mean value as line
-    gg = gg + stat_summary(fun.y = mean, geom = "line")
+    gg = gg + stat_summary(fun.y = median, geom = "line")
 
     ##95% CI
     gg = gg + stat_summary(data = obs.long, fun.data = mean_cl_boot, geom = "linerange") ## geom = 'errorbar'
@@ -112,13 +112,13 @@ plot_perf <- function(obs.long){
     ##x ticks
     gg = gg + theme(axis.text.x = element_text(colour="black"), axis.text.y = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
 
-    gg = gg + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+    ##gg = gg + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
     
     ##axis lables
-    gg = gg + ylab(y.lab) + xlab(x.lab)
+    gg = gg + ylab(y.lab) ##+ xlab(x.lab)
 
     ##colors
-    gg = gg + scale_color_manual(values = lin2color)
+    ##gg = gg + scale_color_manual(values = lin2color)
 
 }
 
