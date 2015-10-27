@@ -1,6 +1,6 @@
 
 ###Assess performance under varying parameters
-##NB: The paths are relative to the root of the scphaser git repo
+###NB: The paths are relative to the root of the scphaser git repo
 
 ##Dirs
 out_data_dir = './ignore/res/perf/data'
@@ -90,58 +90,4 @@ main <- function(){
         dev.off()
     }
 
-}
-
-plot_perf <- function(obs.long, your.x, your.colour, y.lab = 'MCC'){
-
-    ##data and mappings
-    gg = ggplot(obs.long, aes_string(x = 'min_acount', y = 'mcc', colour = your.colour, group = group.col))
-
-    ##facet
-    gg = gg + facet_grid(fc ~ nmincells, scales = 'free_y')
-    
-    ##mean value as line
-    gg = gg + stat_summary(fun.y = median, geom = "line")
-
-    ##95% CI
-    gg = gg + stat_summary(data = obs.long, fun.data = mean_cl_boot, geom = "linerange") ## geom = 'errorbar'
-    
-    ##Background
-    gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
-
-    ##x ticks
-    gg = gg + theme(axis.text.x = element_text(colour="black"), axis.text.y = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
-
-    ##gg = gg + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
-    
-    ##axis lables
-    gg = gg + ylab(y.lab) ##+ xlab(x.lab)
-
-    ##colors
-    ##gg = gg + scale_color_manual(values = lin2color)
-
-}
-
-get_perf_paramset <- function(acset, perm_iter, min_acount, fc, nmincells, input, weigh, method){
-
-    
-    ##specify paramset as all possible combinations of the params
-    paramset = expand.grid(perm_iter, min_acount, fc, nmincells, stringsAsFactors = FALSE)
-    colnames(paramset) = c('perm_iter', 'min_acount', 'fc', 'nmincells')
-    nparamset = nrow(paramset)
-
-    ##loop param set
-    perf_list = list()
-    length(perf_list) = nparamset
-    for(jparam in 1:nparamset){
-        jparamset = paramset[jparam, ]
-        jperf = filter_get_perf(acset, jparamset[, 'min_acount'], jparamset[, 'fc'], jparamset[, 'nmincells'], input, weigh, method)
-        perf_list[[jparam]] = jperf[['var']]
-    }
-    perf_df = do.call(rbind, perf_list)
-
-    ##bind params and perf
-    params2perf_df = cbind(paramset, perf_df)
-        
-    return(params2perf_df)
 }
