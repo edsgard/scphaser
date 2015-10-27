@@ -18,6 +18,7 @@ phase <- function(acset, input = 'gt', weigh = FALSE, method = 'exhaust', nvars_
     score = rep(NA, nfeats)
     names(score) = feats
 
+    
     if(weigh & input == 'gt'){
         acset = set_aseweights(acset)
     }
@@ -562,7 +563,7 @@ set_aseweights <- function(acset, p = 0.5){
 
     altcount = acset[['altcount']]
     refcount = acset[['refcount']]
-
+    
     ##matrix -> vec for fast calculation
     counts = cbind(as.integer(altcount), as.integer(refcount))
     counts = as.data.frame(counts)
@@ -570,10 +571,10 @@ set_aseweights <- function(acset, p = 0.5){
     ##set weight to 0 if altcount == refcount
     weights = rep(0, nrow(counts))
     diff.ind = which(counts[, 1] != counts[, 2])
-
+    
     ##calculate weight as 1 - two.sided p-value
     weights[diff.ind] = apply(counts[diff.ind, ], 1, counts2weight)
-
+    
     ##vec -> matrix
     weights = matrix(weights, nrow = nrow(altcount))
     rownames(weights) = rownames(altcount)
@@ -613,7 +614,11 @@ new_acset <- function(featdata, refcount = NA, altcount = NA, phenodata = NA, gt
 
     ##create data-structure
     if(!is.logical(gt)){
-        acset = list(featdata = featdata, phenodata = phenodata, gt = gt)
+        if(is.logical(refcount)){
+            acset = list(featdata = featdata, phenodata = phenodata, gt = gt)
+        }else{
+            acset = list(featdata = featdata, phenodata = phenodata, gt = gt, refcount = refcount, altcount = altcount)
+        }
         acset = set_compl_gt(acset)
     }else{    
         acset = list(featdata = featdata, phenodata = phenodata, refcount = refcount, altcount = altcount)
