@@ -69,18 +69,17 @@ filter_get_perf <- function(acset, min_acount, fc, nmincells, input, weigh, meth
 
     if(feat_filter){
 
-        ##filter feats on 
+        ##filter feats
         acset = filter_feat_gt(acset, nmincells)
 
     }else{ ##filter variants
 
-        ##filter feats on 
+        ##filter vars
         acset = filter_var_gt(acset, nmincells)
 
-        ##filter feats
+        ##filter feats on number of vars
         acset = filter_feat_nminvar(acset, nminvar)
     }
-
 
     
     ##*###
@@ -226,6 +225,7 @@ subset_ngenes <- function(acset, ngenes){
 
     return(acset)
 }
+
 subset_chr <- function(acset, chr){
     featdata = acset$featdata
     pass_vars = featdata[which(featdata$chr == chr), 'var']
