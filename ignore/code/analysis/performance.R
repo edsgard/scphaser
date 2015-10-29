@@ -30,7 +30,7 @@ plot_perf <- function(obs.long, your.x, your.colour, y.lab = 'MCC'){
 
 }
 
-get_perf_paramset <- function(acset, perm_iter, min_acount, fc, nmincells, input, weigh, method){
+get_perf_paramset <- function(acset, perm_iter, min_acount, fc, nmincells, input, weigh, method, feat_filter = FALSE){
 
     
     ##specify paramset as all possible combinations of the params
@@ -43,7 +43,7 @@ get_perf_paramset <- function(acset, perm_iter, min_acount, fc, nmincells, input
     length(perf_list) = nparamset
     for(jparam in 1:nparamset){
         jparamset = paramset[jparam, ]
-        jperf = filter_get_perf(acset, jparamset[, 'min_acount'], jparamset[, 'fc'], jparamset[, 'nmincells'], input, weigh, method)
+        jperf = filter_get_perf(acset, jparamset[, 'min_acount'], jparamset[, 'fc'], jparamset[, 'nmincells'], input, weigh, method, feat_filter = feat_filter)
         perf_list[[jparam]] = jperf[['var']]
     }
     perf_df = do.call(rbind, perf_list)
@@ -54,7 +54,7 @@ get_perf_paramset <- function(acset, perm_iter, min_acount, fc, nmincells, input
     return(params2perf_df)
 }
 
-filter_get_perf <- function(acset, min_acount, fc, nmincells, input, weigh, method, nminvar = 2, nfracflip = 0.5, feat_filter = TRUE){
+filter_get_perf <- function(acset, min_acount, fc, nmincells, input, weigh, method, nminvar = 2, nfracflip = 0.5, feat_filter = FALSE){
 
 
     ##*###
