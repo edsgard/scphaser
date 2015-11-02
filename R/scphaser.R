@@ -52,8 +52,7 @@ phase_feat_subset <- function(jfeat_it, feat2var_list, acset, input, weigh, meth
     R.utils::cat(verbose, jfeat_it)
     
     ##subset on vars in jfeat
-    jfeat = feats[jfeat_it]
-    vars = feat2var_list[[jfeat]]
+    vars = feat2var_list[[jfeat_it]]
     jacset = subset_rows(acset, vars)
     
     ##phase single feat

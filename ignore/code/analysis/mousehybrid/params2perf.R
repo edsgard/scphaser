@@ -1,6 +1,12 @@
 
 ###Assess performance under varying parameters
 ###NB: The paths are relative to the root of the scphaser git repo
+###
+###SYNOPSIS
+###library('devtools')
+###devtools::load_all()
+###source("ignore/code/analysis/mousehybrid/params2perf.R")
+
 
 ##Dirs
 out_data_dir = './ignore/res/perf/data'
@@ -34,43 +40,47 @@ main <- function(){
     ##*###
     
     ##phasing method params
-    input = c('gt', 'ac')
+    input = 'gt' #c('gt', 'ac')
     method = c('exhaust', 'cluster')
-    weigh = c(TRUE, FALSE)    
-    phase_params = expand.grid(input, method, weigh, stringsAsFactors = FALSE)
-    colnames(phase_params) = c('input', 'method', 'weigh')
+    weigh = FALSE #c(TRUE, FALSE)    
         
     ##permutation iterations
-    npermiter = 3
+    npermiter = 2
     perm_iter = 1:npermiter
 
     ##min read count for genotyping
-    min_acount = c(3, 10)
+    min_acount = 10 #c(3, 10)
     
     ##allelic fold-change for mono-allelic call
-    fc = c(3, 4)
+    fc = 4 # c(3, 4)
     
     ##filter vars on min number of cells with mono-allelic call
-    nmincells = c(5, 10)
+    nmincells = 10 #c(5, 10)
 
+    ##specify paramset as all possible combinations of the params
+    paramset = expand.grid(perm_iter, min_acount, fc, nmincells, input, weigh, method, stringsAsFactors = FALSE)
+    colnames(paramset) = c('perm_iter', 'min_acount', 'fc', 'nmincells', 'input', 'weigh', 'method')
 
+    ##parallelization
+    ncores = 2
+    bp_param = BiocParallel::MulticoreParam(workers = ncores)
+
+    
     ##*###
     ##Calculate performance
     ##*###
     ##loop phase_params and get a dataframe of performance with respect to the other params for each phasing parameter set
-    n_phasemethods = nrow(phase_params)
-    perf_list = list()
-    length(perf_list) = n_phasemethods
-    phasing_str = sub(' ', '', apply(phase_params, 1, paste, collapse = '.'))
-    names(perf_list) = phasing_str
-    for(jmethod in 1:n_phasemethods){
-        print(jmethod)
-        jphase_params = phase_params[jmethod, ]
-        perf_list[[jmethod]] = get_perf_paramset(acset, perm_iter, min_acount, fc, nmincells, jphase_params[1, 'input'], jphase_params[1, 'weigh'], jphase_params[1, 'method']);
-    }
 
+    ##loop param set
+    nparamset = nrow(paramset)
+    perf_list = BiocParallel::bplapply(1:nparamset, filter_get_perf_par, BPPARAM = bp_param, paramset = paramset, acset = acset)
+    perf_df = do.call(rbind, perf_list)
+
+    ##bind params and perf
+    params2perf_df = cbind(paramset, perf_df)    
+    
     ##Dump
-    saveRDS(perf_list, file = perf_rds)
+    saveRDS(params2perf_df, file = perf_rds)
 
     
     ##*###
@@ -78,7 +88,18 @@ main <- function(){
     ##*###
     ##TODO: matrix of plots for each phasing parameter set
 
-    perf_list = readRDS(perf_rds)
+    params2perf_df = readRDS(perf_rds)
+
+    ##summarize by method, across filters
+    library('dplyr')
+    a = dplyr::group_by(params2perf_df, input, method, weigh)
+    dplyr::summarize(a, mcc = mean(mcc))
+
+    ##split into list
+    library('tidyr')
+    params2perf_df = unite(params2perf_df, in.meth.w, input, method, weigh, remove = FALSE, sep = '.')
+    perf_list = split(params2perf_df, params2perf_df[, 'in.meth.w'])
+    
     paramsets = names(perf_list)
     for(jset in paramsets){
 
