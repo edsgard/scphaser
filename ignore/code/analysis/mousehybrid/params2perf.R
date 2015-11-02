@@ -87,6 +87,13 @@ main <- function(){
 
     
     ##*###
+    ##Number of retained vars and feats wrt filter parameters
+    ##*###
+    filter2nvars_nfeats = get_postfilter_stats(acset, paramset)
+    params2perf_df = cbind(params2perf_df, filter2nvars_nfeats)
+    
+    
+    ##*###
     ##Plot performance
     ##*###
     ##TODO: matrix of plots for each phasing parameter set
@@ -98,7 +105,7 @@ main <- function(){
     dplyr::summarize(a, mcc = mean(mcc))
 
     ##split into list
-    params2perf_df = unite(params2perf_df, in.meth.w, input, method, weigh, remove = FALSE, sep = '.')
+    params2perf_df = tidyr::unite(params2perf_df, in.meth.w, input, method, weigh, remove = FALSE, sep = '.')
     perf_list = split(params2perf_df, params2perf_df[, 'in.meth.w'])
     
     paramsets = names(perf_list)

@@ -63,8 +63,30 @@ filter_get_perf_par <- function(jparam, paramset, acset, input, weigh, method, f
     return(jperf)    
 }
 
-filter_get_perf <- function(acset, min_acount, fc, nmincells, input, weigh, method, nminvar = 2, nfracflip = 0.5, feat_filter = FALSE, bp_param = BiocParallel::SerialParam()){
+get_postfilter_stats <- function(acset, paramset){
+    
+    nparamset = nrow(paramset)
+    featdata = acset$featdata
+    nvars = nrow(featdata)
+    nfeats = length(unique(featdata[, 'feat']))
+    nvars_prefilt = rep(nvars, nparamset)
+    nfeats_prefilt = rep(nfeats, nparamset)
+    nvars_postfilt = rep(NA, nparamset)
+    nfeats_postfilt = rep(NA, nparamset)
+    for(jparam_it in 1:nparamset){
+        jparamset = paramset[jparam_it, ]
+        acset_filt = filter_acset(acset, jparamset[, 'min_acount'], jparamset[, 'fc'], jparamset[, 'nmincells'])
+        featdata = acset_filt[['featdata']]
+        nvars_postfilt[jparam_it]= nrow(featdata)
+        nfeats_postfilt[jparam_it] = length(unique(featdata[, 'feat']))        
+    }
 
+    filter2nvars = cbind(nfeats_prefilt, nvars_prefilt, nfeats_postfilt, nvars_postfilt)
+    
+    return(filter2nvars)
+}
+
+filter_acset <- function(acset, min_acount, fc, nmincells, nminvar = 2, feat_filter = FALSE){
 
     ##*###
     ##genotype
@@ -90,11 +112,14 @@ filter_get_perf <- function(acset, min_acount, fc, nmincells, input, weigh, meth
         acset = filter_feat_nminvar(acset, nminvar)
     }
 
-    
-    ##*###
-    ##Performance
-    ##*###
-    
+    return(acset)
+}
+
+filter_get_perf <- function(acset, min_acount, fc, nmincells, input, weigh, method, nminvar = 2, nfracflip = 0.5, feat_filter = FALSE, bp_param = BiocParallel::SerialParam()){
+
+    ##Call gt and filter
+    acset = filter_acset(acset, min_acount, fc, nmincells, nminvar, feat_filter)
+            
     ##Create synthetic data where truth is known
     synt_res = synt_flip(acset, nfracflip, input, weigh, method, bp_param)
 
