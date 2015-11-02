@@ -31,6 +31,44 @@ gt_matpat <- function(){
     return(list(acset = acset, exp = vars2flip_expected))
 }
 
+gt_matpat_twofeat <- function(){
+
+    ##*###
+    ##Half of the cells maternal, half paternal
+    ##*###
+
+    ##create gt matrix
+    ncells = 10
+    paternal = c(0, 2, 0, 0, 2)
+    maternal = c(2, 0, 2, 2, 0)
+
+    ##expected variants to be flipped: (TBD: possibly c(1, 3, 4))
+    vars2flip_expected = list(jfeat = list(as.character(c(2, 5)), as.character(c(1, 3, 4))), jfeat2 = list(as.character(c(6, 8, 9)), as.character(c(7, 10))))
+    
+    gt = as.matrix(as.data.frame(rep(list(paternal, maternal), ncells / 2)))
+    vars = 1:nrow(gt)
+    colnames(gt) = 1:ncells
+    rownames(gt) = vars
+    
+    ##featdata
+    nvars = nrow(gt)
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+
+    ##double up
+    gt = rbind(gt, gt)
+    rownames(gt) = 1:nrow(gt)
+    featdata_jfeat2 = featdata
+    featdata_jfeat2[, 'feat'] = 'jfeat2'
+    featdata = rbind(featdata, featdata_jfeat2)
+    featdata[, 'var'] = as.character(1:nrow(featdata))
+    rownames(featdata) = featdata[, 'var']
+    
+    ##create acset
+    acset = new_acset(featdata, gt = gt)
+
+    return(list(acset = acset, exp = vars2flip_expected))
+}
+
 ac_matpat <- function(){
 
     ##*###
@@ -630,4 +668,39 @@ test_that('weights cause a var to not be flipped', {
     res = wphase_cluster_ase(acset, vars)
     vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))
+})
+
+test_that('parallelized phasing works', {
+
+    acset_exp = gt_matpat_twofeat()
+    acset = acset_exp[['acset']]
+    
+    ##feat2vars
+    featdata = acset[['featdata']]
+    feat2var_list = tapply(featdata[, 'var'], featdata[, 'feat'], unique)
+    feats = names(feat2var_list)
+    nfeats = length(feats)
+    
+    ##params
+    input = 'gt'
+    weigh = FALSE
+    method = 'exhaust'
+    nvars_max = 10
+    ##bp_param = BiocParallel::MulticoreParam(workers = 2)
+    bp_param = BiocParallel::SerialParam()
+    verbosity = 0
+    
+    ##phase
+    res_list = BiocParallel::bplapply(1:nfeats, phase_feat_subset, BPPARAM = bp_param, feat2var_list = feat2var_list, acset = acset, input = input, weigh = weigh, method = method, nvars_max = nvars_max, verbosity = verbosity)
+    names(res_list) = feats
+    
+    ##check results
+    feats = names(res_list)
+    exp = acset_exp[['exp']]
+    for(jfeat in feats){
+        jexp = exp[[jfeat]]
+        vars2flip = res_list[[jfeat]][['vars2flip']]
+        expect_true(identical(vars2flip, jexp[[1]]) | identical(vars2flip, jexp[[2]]))        
+    }
+    
 })

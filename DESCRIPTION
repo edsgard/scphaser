@@ -13,7 +13,8 @@ LazyData: true
 Imports:
     cluster,
     Hmisc,
-    R.utils
+    R.utils,
+    BiocParallel
 Suggests:
     testthat,
     knitr,

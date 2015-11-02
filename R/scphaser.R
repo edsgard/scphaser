@@ -1,6 +1,6 @@
 
 
-phase <- function(acset, input = 'gt', weigh = FALSE, method = 'exhaust', nvars_max = 10, verbosity = -1){
+phase <- function(acset, input = 'gt', weigh = FALSE, method = 'exhaust', nvars_max = 10, verbosity = -1, bp_param = BiocParallel::SerialParam()){
     
     ##feat2vars
     featdata = acset[['featdata']]
@@ -18,7 +18,7 @@ phase <- function(acset, input = 'gt', weigh = FALSE, method = 'exhaust', nvars_
     score = rep(NA, nfeats)
     names(score) = feats
 
-    
+    ##set weights
     if(weigh & input == 'gt'){
         acset = set_aseweights(acset)
     }
@@ -26,27 +26,12 @@ phase <- function(acset, input = 'gt', weigh = FALSE, method = 'exhaust', nvars_
     ##loop features
     verbose = R.utils::Verbose(threshold = verbosity)
     R.utils::cat(verbose, '\nPhasing...\n')
-    progbar = txtProgressBar(min = 0, max = nfeats, style = 3)
-    for(jfeat_it in 1:nfeats){
-
-        setTxtProgressBar(progbar, jfeat_it)
-        
-        ##subset on vars in jfeat
-        jfeat = feats[jfeat_it]
-        vars = feat2var_list[[jfeat]]
-        jacset = subset_rows(acset, vars)
-
-        ##phase single feat
-        res = phase_feat(jacset, input, weigh, method, nvars_max)
-
-        ##store
-        varflip[res[['vars2flip']]] = TRUE
-        score[jfeat_it] = res[['stat']]
-    }
-    ##add newline
-    R.utils::cat(verbose, '\n')
-
+    res_list = BiocParallel::bplapply(1:nfeats, phase_feat_subset, BPPARAM = bp_param, feat2var_list = feat2var_list, acset = acset, input = input, weigh = weigh, method = method, nvars_max = nvars_max, verbosity = verbosity)
+    names(res_list) = feats
+    
     ##store
+    varflip[unlist(lapply(res_list, '[[', 'vars2flip'))] = TRUE
+    score = unlist(lapply(res_list, '[[', 'stat'))
     acset[['varflip']] = names(varflip)[which(varflip)]
     acset[['score']] = score
     
@@ -58,6 +43,23 @@ phase <- function(acset, input = 'gt', weigh = FALSE, method = 'exhaust', nvars_
     acset[['args']][['phase']][c('input', 'weigh', 'method', 'nvars_max')] = args
     
     return(acset)
+}
+
+phase_feat_subset <- function(jfeat_it, feat2var_list, acset, input, weigh, method, nvars_max, verbosity = -1){
+
+    ##print progress
+    verbose = R.utils::Verbose(threshold = verbosity)
+    R.utils::cat(verbose, jfeat_it)
+    
+    ##subset on vars in jfeat
+    jfeat = feats[jfeat_it]
+    vars = feat2var_list[[jfeat]]
+    jacset = subset_rows(acset, vars)
+    
+    ##phase single feat
+    res = phase_feat(jacset, input, weigh, method, nvars_max)
+    
+    return(res)
 }
 
 phase_feat <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nvars_max = Inf){
