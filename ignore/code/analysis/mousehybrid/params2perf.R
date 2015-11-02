@@ -17,6 +17,9 @@ perf_rds = file.path(out_data_dir, 'perf.rds')
 
 ##Libs
 source('./ignore/code/analysis/performance.R')
+library('BiocParallel')
+library('dplyr')
+library('tidyr')
 
 main <- function(){
 
@@ -91,12 +94,10 @@ main <- function(){
     params2perf_df = readRDS(perf_rds)
 
     ##summarize by method, across filters
-    library('dplyr')
     a = dplyr::group_by(params2perf_df, input, method, weigh)
     dplyr::summarize(a, mcc = mean(mcc))
 
     ##split into list
-    library('tidyr')
     params2perf_df = unite(params2perf_df, in.meth.w, input, method, weigh, remove = FALSE, sep = '.')
     perf_list = split(params2perf_df, params2perf_df[, 'in.meth.w'])
     
