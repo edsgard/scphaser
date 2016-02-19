@@ -1,10 +1,14 @@
 
 
-plot_perf <- function(obs.long, your.x, your.colour, y.lab = 'MCC'){
+plot_perf <- function(obs.long, x.str = 'min_acount', group.col = 'in.meth.w', colour.col = 'method', lt.col = 'input', size.col = 'weigh.num', y.lab = 'MCC'){
 
+    library('ggplot2')
+    
     ##data and mappings
-    gg = ggplot(obs.long, aes_string(x = 'min_acount', y = 'mcc', colour = your.colour, group = group.col))
+    gg = ggplot(obs.long, aes_string(x = x.str, y = 'mcc', colour = colour.col, group = group.col, linetype = lt.col, size = size.col))
 
+    gg = gg + scale_size(range = c(0.5, 1), breaks = c(0, 1), labels = c('FALSE', 'TRUE'))
+    
     ##facet
     gg = gg + facet_grid(fc ~ nmincells, scales = 'free_y')
     
@@ -23,8 +27,66 @@ plot_perf <- function(obs.long, your.x, your.colour, y.lab = 'MCC'){
     ##gg = gg + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
     
     ##axis lables
-    gg = gg + ylab(y.lab) ##+ xlab(x.lab)
+    ##gg = gg + ylab(y.lab)
 
+    print(gg)
+    ##colors
+    ##gg = gg + scale_color_manual(values = lin2color)
+
+}
+
+plot_tprfpr <- function(obs.long, errbar.w = 0.25){
+
+    fill.col = 'nmincells'
+    dodge = position_dodge(width = 0.9)
+
+    obs.long[, 'fpr'] = -obs.long[, 'fpr']
+
+    gg = ggplot(obs.long, aes_string(x = 'min_acount', y = 'tpr', fill = fill.col))
+    gg = gg + geom_bar(stat = 'summary', fun.y = 'mean', position = dodge)
+    gg = gg + geom_errorbar(stat = 'summary', fun.data = mean_se, position = dodge, width = errbar.w)
+    gg = gg + geom_bar(aes_string(y = 'fpr'), stat = 'summary', fun.y = 'mean', position = dodge)
+    gg = gg + geom_errorbar(aes_string(y = 'fpr'), stat = 'summary', fun.data = mean_se, position = dodge, width = errbar.w)
+    gg = gg + facet_grid(~fc)
+    ##gg = gg + coord_cartesian(ylim = c(-0.05, 1))
+    gg = gg + scale_y_continuous(breaks = c(-0.05, seq(0, 1, 0.25)))
+    gg = gg + geom_hline(yintercept = 0)
+    gg = gg + geom_hline(yintercept = 0.95, linetype = 'dashed', colour = 'grey')
+    gg = gg + geom_hline(yintercept = -0.05, linetype = 'dashed', colour = 'grey')
+    
+    ##Background
+    gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
+    gg = gg + theme(axis.text = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
+
+    print(gg)
+}
+
+plot_filtsens <- function(obs.long, x.str = 'nmincells', y.str = 'frac.vars', colour.col = 'fc', lt.col = 'min_acount', group.col = 'fc.minacount', y.lab = 'Fraction variants', txt.size = 10){
+
+    library('ggplot2')
+    
+    ##data and mappings
+    gg = ggplot(obs.long, aes_string(x = x.str, y = y.str, colour = colour.col, group = group.col, linetype = lt.col))
+    gg = gg + geom_line()
+    
+    ##facet
+    ##gg = gg + facet_grid(fc ~ nmincells, scales = 'free_y')
+    
+    ##Background
+    gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
+
+    ##x ticks
+    gg = gg + theme(axis.text.x = element_text(colour="black"), axis.text.y = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
+
+    gg = gg + theme(text = element_text(size = txt.size))
+
+    ##axis limits
+    gg = gg + coord_cartesian(ylim = c(0, 1))
+    
+    ##axis lables
+    gg = gg + ylab(y.lab)
+
+    print(gg)
     ##colors
     ##gg = gg + scale_color_manual(values = lin2color)
 
@@ -54,13 +116,69 @@ get_perf_paramset <- function(acset, perm_iter, min_acount, fc, nmincells, input
     return(params2perf_df)
 }
 
-filter_get_perf_par <- function(jparam, paramset, acset, input, weigh, method, feat_filter = FALSE, bp_param = BiocParallel::SerialParam()){
+filter_get_perf_par <- function(jparam, paramset, acset, input, weigh, method, feat_filter = FALSE, bp_param = BiocParallel::SerialParam(), verbosity = 0){
 
+    verbose = R.utils::Verbose(threshold = -1)
+    R.utils::cat(verbose, jparam)
     jparamset = paramset[jparam, ]
-    jperf = filter_get_perf(acset, jparamset[, 'min_acount'], jparamset[, 'fc'], jparamset[, 'nmincells'], jparamset[, 'input'], jparamset[, 'weigh'], jparamset[, 'method'], feat_filter = feat_filter, bp_param = bp_param)
+    jperf = filter_get_perf(acset, jparamset[, 'min_acount'], jparamset[, 'fc'], jparamset[, 'nmincells'], jparamset[, 'input'], jparamset[, 'weigh'], jparamset[, 'method'], feat_filter = feat_filter, bp_param = bp_param, verbosity = verbosity)
     jperf = jperf[['var']]
         
     return(jperf)    
+}
+
+complexity_par <- function(jparam, paramset, acset, bp_param = BiocParallel::SerialParam(), verbosity = 0){
+
+    ##print progress
+    verbose = R.utils::Verbose(threshold = -1)
+    R.utils::cat(verbose, jparam)
+    jparamset = paramset[jparam, ]
+
+    ##*###
+    ##filter
+    ##*###
+        
+    ##subsample n.cells
+    j.cells = jparamset[, 'n.cells']
+    cells = acset[['phenodata']][, 'sample']
+    pass_cells = sample(cells, j.cells)
+    acset_filt = subset_cols(acset, pass_cells)
+
+    ##Filter variants on n.cells monoallelic and feats with < 2 j.vars
+    nmincells = jparamset[, 'nmincells']
+    j.vars = jparamset[, 'n.vars']    
+    acset_filt = filter_acset(acset_filt, nmincells, j.vars)
+
+    ##Filter feats on != j.vars (TBD: could also subsample)
+    featdata = acset_filt[['featdata']]
+    feat2nvars = table(featdata[, 'feat'])
+    pass_feats = names(feat2nvars)[which(feat2nvars == j.vars)]
+    
+    ##subsample n.sel feats
+    j.feats = jparamset[, 'n.feats']
+    pass_feats = sample(pass_feats, j.feats, replace = TRUE)
+    acset_filt = subset_feat(acset_filt, pass_feats)
+
+    ##get dim post-filtering
+    filt.dim = dim(acset_filt[['refcount']])
+    names(filt.dim) = c('n.row', 'n.col')
+
+    
+    ##*###
+    ##phase
+    ##*###
+    input = jparamset[, 'input']
+    weigh = jparamset[, 'weigh']
+    method = jparamset[, 'method']
+    start.time = proc.time()
+    acset_dummy = phase(acset_filt, input = input, weigh = weigh, method = method, bp_param = bp_param, verbosity = verbosity)
+    end.time = proc.time()
+    pass.time = end.time - start.time
+    
+    ##add time to params
+    param.time = c(jparamset, filt.dim, pass.time)
+    
+    return(param.time)
 }
 
 get_postfilter_stats <- function(acset, paramset){
@@ -74,8 +192,15 @@ get_postfilter_stats <- function(acset, paramset){
     nvars_postfilt = rep(NA, nparamset)
     nfeats_postfilt = rep(NA, nparamset)
     for(jparam_it in 1:nparamset){
+        print(jparam_it)
         jparamset = paramset[jparam_it, ]
-        acset_filt = filter_acset(acset, jparamset[, 'min_acount'], jparamset[, 'fc'], jparamset[, 'nmincells'])
+        
+        ##Call gt
+        acset_filt = call_gt(acset, jparamset[, 'min_acount'], jparamset[, 'fc'])
+
+        ##Filter
+        acset_filt = filter_acset(acset_filt, jparamset[, 'nmincells'])
+
         featdata = acset_filt[['featdata']]
         nvars_postfilt[jparam_it]= nrow(featdata)
         nfeats_postfilt[jparam_it] = length(unique(featdata[, 'feat']))        
@@ -86,17 +211,7 @@ get_postfilter_stats <- function(acset, paramset){
     return(filter2nvars)
 }
 
-filter_acset <- function(acset, min_acount, fc, nmincells, nminvar = 2, feat_filter = FALSE){
-
-    ##*###
-    ##genotype
-    ##*###
-    acset = call_gt(acset, min_acount, fc)
-
-
-    ##*###
-    ##Filter
-    ##*###
+filter_acset <- function(acset, nmincells, nminvar = 2, feat_filter = FALSE){
 
     if(feat_filter){
 
@@ -115,13 +230,16 @@ filter_acset <- function(acset, min_acount, fc, nmincells, nminvar = 2, feat_fil
     return(acset)
 }
 
-filter_get_perf <- function(acset, min_acount, fc, nmincells, input, weigh, method, nminvar = 2, nfracflip = 0.5, feat_filter = FALSE, bp_param = BiocParallel::SerialParam()){
+filter_get_perf <- function(acset, min_acount, fc, nmincells, input, weigh, method, nminvar = 2, nfracflip = 0.5, feat_filter = FALSE, bp_param = BiocParallel::SerialParam(), verbosity = 0){
+    
+    ##Call gt
+    acset = call_gt(acset, min_acount, fc)
 
-    ##Call gt and filter
-    acset = filter_acset(acset, min_acount, fc, nmincells, nminvar, feat_filter)
+    ##Filter
+    acset = filter_acset(acset, nmincells, nminvar, feat_filter)
             
     ##Create synthetic data where truth is known
-    synt_res = synt_flip(acset, nfracflip, input, weigh, method, bp_param)
+    synt_res = synt_flip(acset, nfracflip, input, weigh, method, bp_param, verbosity = verbosity)
 
     ##performance
     varsflip = synt_res[['varsflip']]
@@ -130,10 +248,8 @@ filter_get_perf <- function(acset, min_acount, fc, nmincells, input, weigh, meth
     return(perf)
 }
 
-synt_flip <- function(acset, nfracflip, input, weigh, method, bp_param = BiocParallel::SerialParam()){
-##start with gt where all vars are initially phased (no vars should be flipped)
-##then randomly flip nfracflip variants
-
+rand_flip <- function(acset, nfracflip = 0.5){
+    
     featdata = acset$featdata
     gt = acset$gt
     
@@ -158,9 +274,19 @@ synt_flip <- function(acset, nfracflip, input, weigh, method, bp_param = BiocPar
     }else{
         acset_synt = new_acset(featdata = featdata, gt = gt)
     }
-    
+
+    return(acset_synt)
+}
+
+synt_flip <- function(acset, nfracflip, input, weigh, method, bp_param = BiocParallel::SerialParam(), verbosity = 0){
+##start with gt where all vars are initially phased (no vars should be flipped)
+##then randomly flip nfracflip variants
+
+    ##randomly flip nfracflip vars
+    acset_synt = rand_flip(acset, nfracflip)
+        
     ##phase
-    acset_synt = phase(acset_synt, input = input, weigh = weigh, method = method, bp_param = bp_param)
+    acset_synt = phase(acset_synt, input = input, weigh = weigh, method = method, bp_param = bp_param, verbosity = verbosity)
 
     
     ##*###

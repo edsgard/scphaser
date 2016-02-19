@@ -1,9 +1,11 @@
 
 
+
+
 \section{TODO}
 ##Test TPR and FPR on real mouse data. Flip a number of variants in mouse data and check if refinds them.
 ##Relate filters and performance to RPKM or read count summary stats (or show dists/boxplots)
-##Number of vars and feats post-filtering
+##Relate performance to number of vars and feats post-filtering
 ##Possibly relate cell-groups and their expression levels (esp split-cells) to performance
 ##Calculate featscore (variabilityscore) as fc of post/pre
 ##Error-checks (acset constructor). biallelic vars, data-frame, ...
@@ -18,6 +20,11 @@
 ##Readme.md: see pkg book for tips and add installation code: devtools::install_github("edajeda/scphaser")
 ##Use checkpoint package if including any dependencies
 ##Add Travis. Seems to only be free for public github repos.
+
+\subsection{Talk}
+-Complexity plot
+-Rm progress-bar output from vignette
+-Number of expressed genes (w two snps, in at least nmin.cells): (minacount, in n cells)
 
 \subsection{Lower prio}
 
@@ -101,7 +108,7 @@ Algorithm 2
 the same class: Calculate compactness without any
 change and compare with the compactness after clustering.
 
-Algorithm 3
+Algorithm 3 (include uncertainty in genotype call)
 Idea: The discretization is subjected to false positive monoallelic calls due to that the genotype is a stochastic variable with an allele count distribution that depends on the expression level at a SNP.
 1) Calculate the probability of observing mono-allelic calls under a beta-binomial biallelic null hypothesis.
 2) Weigh each datapoint with 1-Prob obtained from step 1. 
