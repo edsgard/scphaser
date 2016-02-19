@@ -679,6 +679,38 @@ subset_rows <- function(acset, sel.ind){
     return(acset)
 }
 
+subset_cols <- function(acset, sel.ind){
+
+    ##data structures with features as rows
+    acset[['phenodata']] = acset[['phenodata']][sel.ind, ]
+
+    pheno_structs = NULL
+    if('refcount' %in% names(acset)){
+        pheno_structs = c(pheno_structs, 'refcount')
+    }
+
+    if('altcount' %in% names(acset)){
+        pheno_structs = c(pheno_structs, 'altcount')
+    }
+
+    if('gt' %in% names(acset)){
+        pheno_structs = c(pheno_structs, 'gt')
+    }
+    
+    if('gt_compl' %in% names(acset)){
+        pheno_structs = c(pheno_structs, 'gt_compl')
+    }
+
+    if('gt_phased' %in% names(acset)){
+        pheno_structs = c(pheno_structs, 'gt_phased')
+    }    
+
+    ##subset
+    acset[pheno_structs] = lapply(acset[pheno_structs], function(j.obj){j.obj[, sel.ind]})
+    
+    return(acset)
+}
+
 subset_feat <- function(acset, pass_feat){
 
     featdata = acset[['featdata']]
