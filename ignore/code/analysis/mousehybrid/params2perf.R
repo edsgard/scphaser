@@ -9,8 +9,8 @@
 
 
 ##Dirs
-out_data_dir = './ignore/res/perf/data'
-out_pdf_dir = './ignore/res/perf/pdf'
+out_data_dir = './ignore/res/mousehybrid/perf/data'
+out_pdf_dir = './ignore/res/mousehybrid/perf/pdf'
 
 ##Files
 perf_rds = file.path(out_data_dir, 'perf.full.rds')
@@ -185,7 +185,7 @@ main <- function(){
     dev.off()
 
     
-    ##mean fpr and tpr
+    ##Obsolete: mean fpr and tpr
     obs.long = obs.long %>% group_by(min_acount, fc, nmincells) %>% summarise(tpr.mean = mean(tpr), fpr.mean = mean(fpr), tpr.sd = sd(tpr), fpr.sd = sd(fpr))
 
     x.str = 'fpr.mean'
@@ -200,7 +200,7 @@ main <- function(){
     gg = gg + facet_grid(~fc)
     print(gg)
       
-    
+
     ##*###
     ##Filters vs "sensitivity"
     ##*###
@@ -224,6 +224,65 @@ main <- function(){
     dev.off()
     
 
+    ##*###
+    ##Number of errors (as in marinov/post.phase.R)
+    ##*###
+    library('ggplot2')
+    n.err = params2perf_df[, 'fp'] + params2perf_df[, 'fn']
+    frac.err = n.err / params2perf_df[, 'nvars_postfilt']
+    params2perf_df = cbind(params2perf_df, n.err, frac.err)
+
+    y.resp = c('Number of vars', 'Fraction erronously phased vars', 'Number of genes')
+    names(y.resp) = c('nvars_postfilt', 'frac.err', 'nfeats_postfilt')
+    
+    for(j.y.resp.name in names(y.resp)){
+        param2perf = params2perf_df
+        
+        ##add numeric weigh col
+        weigh.num = as.numeric(param2perf[, 'weigh'])
+        param2perf = cbind(param2perf, weigh.num)
+        which(unlist(lapply(param2perf, is.factor)))
+
+        x.str = 'min_acount'
+        group.col = 'in.meth.w'
+        colour.col = 'method'
+        lt.col = 'input'
+        size.col = 'weigh.num'
+        obs.long = param2perf
+        x.lab = 'Minimum allele count of at least one allele'
+        y.lab = paste(y.resp[j.y.resp.name], sep = ' ')
+        
+        ##data and mappings
+        gg = ggplot(obs.long, aes_string(x = x.str, y = j.y.resp.name, colour = colour.col, group = group.col, linetype = lt.col, size = size.col))
+        gg = gg + scale_size(range = c(0.5, 1), breaks = c(0, 1), labels = c('FALSE', 'TRUE'))
+
+        ##median value as line
+        gg = gg + stat_summary(fun.y = median, geom = "line")
+
+        ##95% CI
+        gg = gg + stat_summary(data = obs.long, fun.data = mean_cl_boot, geom = "linerange") ## geom = 'errorbar'
+
+        ##facet
+        gg = gg + facet_grid(fc ~ nmincells, scales = 'free_y')
+        
+        ##Background
+        gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
+
+        ##x ticks
+        gg = gg + theme(axis.text.x = element_text(colour="black"), axis.text.y = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
+
+        ##gg = gg + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+        
+        ##axis lables
+        gg = gg + xlab(x.lab) + ylab(y.lab)
+
+        j.pdf = file.path(out_pdf_dir, paste(j.y.resp.name, 'pdf', sep = '.'))
+        pdf(file = j.pdf)
+        print(gg)
+        dev.off()
+    }    
+    
+    
     ##*##
     ##TBD: matrix of plots for each phasing param.set
     ##*###

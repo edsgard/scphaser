@@ -3,28 +3,26 @@
 
 
 \section{TODO}
-##Test TPR and FPR on real mouse data. Flip a number of variants in mouse data and check if refinds them.
-##Relate filters and performance to RPKM or read count summary stats (or show dists/boxplots)
-##Relate performance to number of vars and feats post-filtering
-##Possibly relate cell-groups and their expression levels (esp split-cells) to performance
-##Calculate featscore (variabilityscore) as fc of post/pre
-##Error-checks (acset constructor). biallelic vars, data-frame, ...
-##Error-check: In set_aseweights: double-check that ac exists.
-##synth_acset (allele counts)
-##Test complexity based on synth data (ncell, nvars, ...)
-##Expand test-suite (/tests)
-##Document fcns: /man
-##namespace: which fcns to export
-##Final output: provide actual haplotype: simply in varflip (0 corresponding to ref, 1 to alt)
-##Lintr check
+##pkg: Final output: provide actual haplotype. See marinov/post.phase.R for stub-code for this.
+##pkg: Document fcns: /man
+##pkg: namespace: which fcns to export
 ##Readme.md: see pkg book for tips and add installation code: devtools::install_github("edajeda/scphaser")
+
+##Possibly: cmp population phasing
+##(Vars in overlapping regions)
+##Possibly: Ensembl gene-annot
+##Relate filters and performance to RPKM or read count summary stats (or show dists/boxplots)
+##(Relate performance to number of vars and feats post-filtering)
+##(Possibly relate cell-groups and their expression levels (esp split-cells) to performance)
+##(Calculate featscore (variabilityscore) as fc of post/pre)
+##(synth_acset (allele counts))
+##(Test complexity based on synth data (ncell, nvars, ...))
+##(Expand test-suite (/tests))
+##Lintr check
 ##Use checkpoint package if including any dependencies
 ##Add Travis. Seems to only be free for public github repos.
 
 \subsection{Talk}
--Complexity plot
--Rm progress-bar output from vignette
--Number of expressed genes (w two snps, in at least nmin.cells): (minacount, in n cells)
 
 \subsection{Lower prio}
 
@@ -181,3 +179,34 @@ Like Hadley Wickham (http://r-pkgs.had.co.nz/r.html#r) but with a few tweaks:
 3) Spacing. Don't use spaces between control statements and parenthesis.
 4) Comments. For the default R indentation in emacs to work, don't use space
 after a leading single hash, but use double-hashes.
+
+\section{Analysis}
+performance vs seq depth
+performance vs expression level
+Possible comparisons: 
+-population phasing
+-Hap-cut
+-Haptree-X
+-phaser (Lappalainen)
+
+RS: ja, bulk-ASE i upp till 20\% av generna...
+RS: Varför ac sämre än gt. Antar att mitten av distributionen är heterozygot, men vid
+närvaro av exempelvis bulk-ASE så stämmer ju inte det!
+
+\section{Applications}
+cis-regulatory variation studies
+Somatic mutations in cancer
+Multiple mutations in Mendelian disease
+Complex trait/disease association studies
+Treatment response
+Treatment side-effects
+
+Haven't thought about if really feasible/correct:
+Host-donor HLA haplotype matching
+Identifying imprinted genes, CNVs, aneuploidies
+Quick determination of which X-chromosome is active in female cells
+Investigate if a certain haplotype is dominant: avel, växtförädling, korsning av stammar
+
+\section{Supp}
+-Why exhaustive (see above)
+-Clustering: Fall-back to exhaustive if only two variants

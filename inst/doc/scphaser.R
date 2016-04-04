@@ -27,15 +27,13 @@ acset_rnd = racset(acset, type = 'gt')
 
 ## ------------------------------------------------------------------------
 
-##filter vars
-nmincells = 5
-acset = filter_var_gt(acset, nmincells)
+## ------------------------------------------------------------------------
+nmincells = 3
+nminvar = 2
+acset = filter_acset(acset, nmincells, nminvar)
 lapply(acset, dim)
 
-##filter feats
-nminvar = 2
-acset = filter_feat_nminvar(acset, nminvar)
-lapply(acset, dim)
+## ------------------------------------------------------------------------
 length(unique(acset$featdata$feat))
 
 ## ------------------------------------------------------------------------
@@ -46,8 +44,8 @@ length(unique(acset$featdata$feat))
 
 ##acset = phase(acset, input = 'gt', weigh = TRUE, method = 'exhaust')
 ##acset = phase(acset, input = 'gt', weigh = TRUE, method = 'cluster')
-acset = phase(acset, input = 'gt', weigh = FALSE, method = 'exhaust')
 ##acset = phase(acset, input = 'gt', weigh = FALSE, method = 'cluster')
+acset = phase(acset, input = 'gt', weigh = FALSE, method = 'exhaust', verbosity = 0)
 
 lapply(acset, dim)
 
@@ -57,11 +55,6 @@ length(acset[['varflip']])
 ##scores
 length(unique(acset[['featdata']][, 'feat']))
 length(unique(acset[['score']]))
-
-## ------------------------------------------------------------------------
-nperm = 10
-pval = get_phase_pval(acset, nperm)
-print(pval)
 
 ## ------------------------------------------------------------------------
 ##gt concordance before and after phasing
@@ -77,19 +70,15 @@ acset$gt_phased_conc$notconc$feat2ncell
 
 ## ------------------------------------------------------------------------
 
-##filter vars
-nmincells = 5
-acset_rnd = filter_var_gt(acset_rnd, nmincells)
-lapply(acset_rnd, dim)
-
-##filter feats
+##filter
+nmincells = 3
 nminvar = 2
-acset_rnd = filter_feat_nminvar(acset_rnd, nminvar)
+acset_rnd = filter_acset(acset_rnd, nmincells, nminvar)
 lapply(acset_rnd, dim)
 length(unique(acset_rnd$featdata$feat))
 
 ##phase
-acset_rnd = phase(acset_rnd, input = 'gt', weigh = FALSE, method = 'exhaust')
+acset_rnd = phase(acset_rnd, input = 'gt', weigh = FALSE, method = 'exhaust', verbosity = 0)
 
 ##gt concordance before and after phasing
 acset_rnd = set_gt_conc(acset_rnd)    

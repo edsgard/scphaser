@@ -1,6 +1,6 @@
 ---
 title: "Tutorial for phasing of variants with scphaser"
-author: "Daniel Edsgärd and Björn Reinius"
+author: "Daniel Edsgärd"
 date: "`r Sys.Date()`"
 output: rmarkdown::html_vignette
 vignette: >

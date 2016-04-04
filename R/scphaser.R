@@ -562,6 +562,10 @@ get_wvar_ase <- function(ase, weights){
 
 set_aseweights <- function(acset, p = 0.5){
 
+    if(is.null(acset[['altcount']]) || is.null(acset[['refcount']])){
+        stop('altcount or refcount is null')
+    }
+    
     altcount = acset[['altcount']]
     refcount = acset[['refcount']]
     
@@ -600,6 +604,17 @@ counts2weight <- function(counts, p = 0.5){
 }
 
 new_acset <- function(featdata, refcount = NA, altcount = NA, phenodata = NA, gt = NA){
+
+    ##Error-checks
+    if(is.logical(gt) && (is.logical(refcount) || is.logical(altcount))){
+        stop('Neither gt nor refcount and altcount has been provided')
+    }
+    if(!is.logical(refcount) && is.logical(altcount)){
+        stop('refcount provided but not altcount')
+    }
+    if(is.logical(refcount) && !is.logical(altcount)){
+        stop('altcount provided but not refcount')
+    }
     
     ##set phenodata
     if(is.logical(phenodata)){
@@ -625,17 +640,69 @@ new_acset <- function(featdata, refcount = NA, altcount = NA, phenodata = NA, gt
         acset = list(featdata = featdata, phenodata = phenodata, refcount = refcount, altcount = altcount)
     }
 
-    ##check: featdata has columns named: 'var', 'feat'
-    ##phenodata has column named: 'sample'
-    ##errorcheck that featdata[, 'var'] and featdata[, 'feat'] is character
-    ##TODO: errorcheck that input featdata and phenodata are dataframes
-    ##TODO: check that either refcount and altcount provided and not gt, OR, gt and none of the count matrices
-    ##TODO: check that refcount and altcount are matrixes
-    ##TODO: check that refcount and altcount have rownames and colnames are not NULL
-    ##TODO: errorcheck featdata rownames identical to count matrixes rownames
-    ##TODO: errorcheck phenodata rownames identical to count matrixes colnames
-    ##TODO: errorcheck that vars and feats has no NA values.
-    ##if gt provided: check that 0, 1, 2.
+    ##*###
+    ##Error-checks
+    ##*###
+    if(!('var' %in% colnames(featdata))){
+        stop('featdata require a column named "var"')
+    }
+    if(!('feat' %in% colnames(featdata))){
+        stop('featdata require a column named "feat"')
+    }
+    if(!('sample' %in% colnames(phenodata))){
+        stop('phenodata require a column named "sample"')
+    }
+    if(!(is.character(featdata[, 'var']))){
+        stop('The column "var" in featdata need to be of class "character"')
+    }
+    if(!(is.character(featdata[, 'feat']))){
+        stop('The column "feat" in featdata need to be of class "character"')
+    }
+    if(!(is.data.frame(featdata))){
+        stop('featdata need to be a data-frame')
+    }
+    if(!(is.data.frame(phenodata))){
+        stop('phenodata need to be a data-frame')
+    }
+    if(length(which(is.na(featdata[, 'var']))) > 0){
+        stop('NA values in "var" column of featdata')
+    }
+    if(length(which(is.na(featdata[, 'feat']))) > 0){
+        stop('NA values in "feat" column of featdata')
+    }
+                  
+    if(!is.logical(refcount)){
+        if(!(is.matrix(refcount))){
+            stop('refcount need to be a matrix')
+        }
+        if(!(is.matrix(altcount))){
+            stop('altcount need to be a matrix')
+        }
+        if(is.null(rownames(refcount))){
+            stop('rownames of refcount is null')
+        }
+        if(is.null(rownames(altcount))){
+            stop('rownames of altcount is null')
+        }
+        if(is.null(colnames(refcount))){
+            stop('colnames of refcount is null')
+        }
+        if(is.null(colnames(altcount))){
+            stop('colnames of altcount is null')
+        }
+        if(!(rownames(featdata) == rownames(altcount) && rownames(featdata) == rownames(refcount))){
+            stop('rownames of featdata and refcount and altcount need to be identical')
+        }
+        if(!(rownames(phenodata) == colnames(altcount) && rownames(phenodata) == colnames(refcount))){
+            stop('rownames of phenodata need to identical to the colnames of refcount and altcount')
+        }
+    }
+    if(!is.logical(gt)){
+        if(length(setdiff(gt, c(NA, 0, 1, 2)))){
+            stop('gt contains values that are not in the allowed set {0, 1, 2, NA}')
+        }
+    }
+    
     return(acset)
 }
 
@@ -673,7 +740,7 @@ subset_rows <- function(acset, sel.ind){
 
     ##vector data-structures
     if('varflip' %in% names(acset)){
-        acset[['varflip']] = acset[['varflip']][sel.ind]
+        acset[['varflip']] = intersect(acset[['varflip']], acset[['featdata']][, 'var'])
     }        
     
     return(acset)
@@ -682,7 +749,7 @@ subset_rows <- function(acset, sel.ind){
 subset_cols <- function(acset, sel.ind){
 
     ##data structures with features as rows
-    acset[['phenodata']] = acset[['phenodata']][sel.ind, ]
+    acset[['phenodata']] = acset[['phenodata']][sel.ind, , drop = FALSE]
 
     pheno_structs = NULL
     if('refcount' %in% names(acset)){
@@ -722,6 +789,25 @@ subset_feat <- function(acset, pass_feat){
     ##subset on passed vars
     pass_var = featdata[, 'var']
     acset = subset_rows(acset, pass_var)
+
+    return(acset)
+}
+
+filter_acset <- function(acset, nmincells, nminvar = 2, feat_filter = FALSE){
+
+    if(feat_filter){
+
+        ##filter feats
+        acset = filter_feat_gt(acset, nmincells)
+
+    }else{ ##filter variants
+
+        ##filter vars
+        acset = filter_var_gt(acset, nmincells)
+
+        ##filter feats on number of vars
+        acset = filter_feat_nminvar(acset, nminvar)
+    }
 
     return(acset)
 }
@@ -842,7 +928,7 @@ filter_var_gt <- function(acset, ncells = 3){
     ##loop feats
     feat2vars = tapply(featdata[, 'var'], featdata[, 'feat'], unique)
     var_pass = unlist(lapply(feat2vars, function(jvars, gt, ncells){
-        gt = gt[jvars, ]
+        gt = gt[jvars, , drop = FALSE]
         pass_var = filter_var_singlefeat_gt(gt, ncells)
         return(pass_var)
     }, gt, ncells))
@@ -882,8 +968,24 @@ filter_var_mincount <- function(acset, mincount = 3, ncells = 1){
     return(acset)
 }
 
-##TODO: testthat, identical rownames in all three objects
-##TODO: testthat, identical colnames in count mats
+filter_homovars <- function(j.acset, alpha = 0.1, mono.ase = 0.5){
+
+    ##Number of cells with ase towards each of the alleles
+    ase = j.acset[['altcount']] / (j.acset[['refcount']] + j.acset[['altcount']])
+    n.refcells = apply(ase, 1, function(j.ase){length(which(j.ase < mono.ase))})
+    n.altcells = apply(ase, 1, function(j.ase){length(which(j.ase > (1 - mono.ase)))})
+    n.allele2cells = cbind(n.refcells, n.altcells, n.refcells + n.altcells)
+    colnames(n.allele2cells) = c('ref', 'alt', 'sum')
+    
+    ##get binom pval
+    pvals = apply(n.allele2cells, 1, function(j.c){pvals = binom.test(j.c['alt'], j.c['sum'], p = 0.5, alternative = 'two.sided')$p.value})
+    pass.rs = names(pvals)[which(pvals >= alpha)]
+
+    ##filter
+    j.acset = subset_rows(j.acset, pass.rs);
+    
+    return(j.acset)
+}    
 
 call_gt <- function(acset, min_acount = 3, fc = 3){
 ###Simplistic genotype caller. Genotype callers often rely on DNA-specific assumptions.

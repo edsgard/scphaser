@@ -14,6 +14,7 @@ out_pdf_dir = './ignore/res/complexity/pdf'
 
 ##Files
 timing_rds = file.path(out_data_dir, 'timing.rds')
+timing_rds = file.path(out_data_dir, 'timing.rand.rds')
 
 ##Libs
 source('./ignore/code/analysis/performance.R')
@@ -99,7 +100,7 @@ main <- function(){
     nminvar = 2
     
     ##filter on n.vars
-    n.vars = c(2, 4, 8, 16)
+    n.vars = c(2, 4, 6, 8, 10)
 
     ##subsample n.sel feats
     n.feats = c(25, 50, 100)
@@ -110,7 +111,7 @@ main <- function(){
     ##specify paramset as all possible combinations of the params
     paramset = expand.grid(perm_iter, min_acount, fc, nmincells, input, weigh, method, n.vars, n.feats, n.cells, stringsAsFactors = FALSE)
     colnames(paramset) = c('perm_iter', 'min_acount', 'fc', 'nmincells', 'input', 'weigh', 'method', 'n.vars', 'n.feats', 'n.cells')
-    dim(paramset) #384
+    dim(paramset) #480
     
     ##parallelization
     ncores = 80
@@ -120,17 +121,22 @@ main <- function(){
     ##*###
     ##Filter
     ##*###
-        
+
+    
     ##Call gt
     acset = call_gt(acset, min_acount, fc)
 
-    ##Filter
-    acset = filter_acset(acset, nmincells, nminvar)
-    lapply(acset, dim) #167443 -> 152110
-    length(unique(acset[['featdata']][, 'feat'])) #11590
+    ##randomly flip nfracflip vars
+    nfracflip = 0.5
+    acset_rand = rand_flip(acset, nfracflip)
     
-    feat2nvars = table(acset[['featdata']][, 'feat'])
-    table(feat2nvars) #16: 294    
+    ##Filter
+    acset_rand = filter_acset(acset_rand, nmincells, nminvar)
+    lapply(acset_rand, dim) #167443 -> 152110
+    length(unique(acset_rand[['featdata']][, 'feat'])) #11590
+    
+    feat2nvars = table(acset_rand[['featdata']][, 'feat'])
+    table(feat2nvars) #10: 536
         
     
     ##*###
@@ -140,7 +146,7 @@ main <- function(){
 
     ##loop param set
     nparamset = nrow(paramset)
-    res_list = BiocParallel::bplapply(1:nparamset, complexity_par, BPPARAM = bp_param, paramset = paramset, acset = acset, verbosity = verbosity)
+    res_list = BiocParallel::bplapply(1:nparamset, complexity_par, BPPARAM = bp_param, paramset = paramset, acset = acset_rand, verbosity = verbosity)
     res_df = do.call(rbind, res_list)
     res_df = as.data.frame(res_df)
 
@@ -157,8 +163,7 @@ main <- function(){
 
     ##Dump
     saveRDS(res_df, file = timing_rds)
-    ##status: sub (11.05 -> ; 384 rows, 80 cores)
-    ##Error in `row.names<-.data.frame`(`*tmp*`, value = value): duplicate 'row.names' are not allowed
+    ##status: fin (50min; 384 rows, 80 cores)
     
     
     ##*###
@@ -166,19 +171,74 @@ main <- function(){
     ##*###    
     res_df = readRDS(timing_rds)
 
+    weigh.num = as.integer(as.logical(res_df[, 'weigh']))
+    res_df = cbind(res_df, weigh.num)
+    
     x.str = 'n.cells'
     y.str = 'elapsed'
     group.col = 'in.meth.w'
     colour.col = 'method'
     lt.col = 'input'
     size.col = 'weigh.num'
-    
-    gg = ggplot(res_df, aes_string(x = x.str, y = y.str, group = group.col, colour = colour.col, lt = lt.col, size = size.col))
+
+    library('ggplot2')
+    gg = ggplot(res_df, aes_string(x = x.str, y = y.str, group = group.col, colour = colour.col, linetype = lt.col, size = size.col))
     gg = gg + geom_line()
     gg = gg + scale_size(range = c(0.5, 1), breaks = c(0, 1), labels = c('FALSE', 'TRUE'))    
     gg = gg + facet_grid(n.vars ~ n.feats, scales = 'free_y')
+    plot(gg)
 
+    ##time2ncells
+    x.str = 'n.cells'
+    j.pdf = file.path(out_pdf_dir, 'time2ncells.pdf')
+    gg = ggplot(res_df, aes_string(x = x.str, y = y.str, group = group.col, colour = colour.col, linetype = lt.col, size = size.col))
+    gg = gg + stat_summary(fun.y = 'mean', geom = 'line')
+    gg = gg + scale_size(range = c(0.5, 1), breaks = c(0, 1), labels = c('FALSE', 'TRUE'))
+    gg = gg + facet_wrap(~ n.vars, scales = 'free')
 
+    ##Background
+    gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
+    gg = gg + theme(axis.text = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
+
+    pdf(j.pdf)
+    plot(gg)
+    dev.off()
+    
+    ##time2nfeats
+    x.str = 'n.feats'
+    j.pdf = file.path(out_pdf_dir, 'time2ngenes.pdf')
+    gg = ggplot(res_df, aes_string(x = x.str, y = y.str, group = group.col, colour = colour.col, linetype = lt.col, size = size.col))
+    gg = gg + stat_summary(fun.y = 'mean', geom = 'line')
+    gg = gg + scale_size(range = c(0.5, 1), breaks = c(0, 1), labels = c('FALSE', 'TRUE'))
+    gg = gg + facet_wrap(~ n.vars, scales = 'free')
+
+    ##Background
+    gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
+    gg = gg + theme(axis.text = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
+
+    pdf(j.pdf)
+    plot(gg)
+    dev.off()
+
+    ##time2nvars
+    ##rm
+    res_df_filt = filter(res_df, n.vars != 2)
+    pdf.h = 4
+    pdf.w = 4
+    x.str = 'n.vars'
+    j.pdf = file.path(out_pdf_dir, 'time2nvars.pdf')
+    gg = ggplot(res_df_filt, aes_string(x = x.str, y = y.str, group = group.col, colour = colour.col, linetype = lt.col, size = size.col))
+    gg = gg + stat_summary(fun.y = 'mean', geom = 'line')
+    gg = gg + scale_size(range = c(0.5, 1), breaks = c(0, 1), labels = c('FALSE', 'TRUE'))
+    gg = gg + ylab('Time')
+    
+    ##Background
+    gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
+    gg = gg + theme(axis.text = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
+
+    pdf(j.pdf, height = pdf.h, width = pdf.w)
+    plot(gg)
+    dev.off()
     
 }
 

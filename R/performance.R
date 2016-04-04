@@ -236,7 +236,7 @@ plot_conc <- function(acset, feats = NA, cex = 0.5){
 
     ##txt lims
     y_txt = c(max_val - ylim_txtmargin, - max_val + ylim_txtmargin)
-    x_txt = c(10, 10)
+    x_txt = c(20, 20)
     
     par(mfrow = c(2, 1), cex = cex)    
     barplot(conc_pre[feats], ylim = ylim, las = 2, names = feats, col = "darkblue", border = "darkblue", main = "Pre-phasing", ylab = "Number of cells")    

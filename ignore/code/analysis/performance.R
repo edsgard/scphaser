@@ -93,7 +93,6 @@ plot_filtsens <- function(obs.long, x.str = 'nmincells', y.str = 'frac.vars', co
 }
 
 get_perf_paramset <- function(acset, perm_iter, min_acount, fc, nmincells, input, weigh, method, feat_filter = FALSE, bp_param = BiocParallel::SerialParam()){
-
     
     ##specify paramset as all possible combinations of the params
     paramset = expand.grid(perm_iter, min_acount, fc, nmincells, stringsAsFactors = FALSE)
@@ -101,19 +100,25 @@ get_perf_paramset <- function(acset, perm_iter, min_acount, fc, nmincells, input
     nparamset = nrow(paramset)
 
     ##loop param set
-    perf_list = list()
-    length(perf_list) = nparamset
+    perf_list_var = list()
+    perf_list_feat = list()
+    length(perf_list_var) = nparamset
+    length(perf_list_feat) = nparamset
     for(jparam in 1:nparamset){
         jparamset = paramset[jparam, ]
         jperf = filter_get_perf(acset, jparamset[, 'min_acount'], jparamset[, 'fc'], jparamset[, 'nmincells'], input, weigh, method, feat_filter = feat_filter, bp_param = bp_param)
-        perf_list[[jparam]] = jperf[['var']]
+        perf_list_var[[jparam]] = jperf[['var']]
+        perf_list_feat[[jparam]] = jperf[['feat']]
     }
-    perf_df = do.call(rbind, perf_list)
-
+    perf_df_var = do.call(rbind, perf_list_var)
+    perf_df_feat = do.call(rbind, perf_list_feat)
+    
     ##bind params and perf
-    params2perf_df = cbind(paramset, perf_df)
-        
-    return(params2perf_df)
+    params2perf_df_var = cbind(paramset, perf_df_var)
+    params2perf_df_feat = cbind(paramset, perf_df_feat)
+    param2perf_list = list(var = params2perf_df_var, feat = params2perf_df_feat)
+    
+    return(params2perf_df_list)
 }
 
 filter_get_perf_par <- function(jparam, paramset, acset, input, weigh, method, feat_filter = FALSE, bp_param = BiocParallel::SerialParam(), verbosity = 0){
@@ -122,9 +127,65 @@ filter_get_perf_par <- function(jparam, paramset, acset, input, weigh, method, f
     R.utils::cat(verbose, jparam)
     jparamset = paramset[jparam, ]
     jperf = filter_get_perf(acset, jparamset[, 'min_acount'], jparamset[, 'fc'], jparamset[, 'nmincells'], jparamset[, 'input'], jparamset[, 'weigh'], jparamset[, 'method'], feat_filter = feat_filter, bp_param = bp_param, verbosity = verbosity)
-    jperf = jperf[['var']]
         
     return(jperf)    
+}
+
+filter_phase_par <- function(jparam, paramset, acset, feat_filter = FALSE, bp_param = BiocParallel::SerialParam(), verbosity = 0){
+
+    verbose = R.utils::Verbose(threshold = -1)
+    R.utils::cat(verbose, jparam)
+    jparamset = paramset[jparam, ]
+
+
+    ##Call gt
+    min_acount = jparamset[, 'min_acount']
+    fc = jparamset[, 'fc']
+    acset = call_gt(acset, min_acount, fc)
+
+    ##Filter
+    nmincells = jparamset[, 'nmincells']
+    nminvar = jparamset[, 'nminvar']
+    acset = filter_acset(acset, nmincells, nminvar)
+    
+    ##phase
+    input = jparamset[, 'input']
+    weigh = jparamset[, 'weigh']
+    method = jparamset[, 'method']
+
+    start.time = proc.time()
+    acset_phased = phase(acset, input = input, weigh = weigh, method = method, bp_param = bp_param, verbosity = verbosity)
+    end.time = proc.time()
+    pass.time = end.time - start.time
+
+    ##bind time and call params
+    acset_phased[['time']] = pass.time
+    acset_phased[['params']] = jparamset
+    
+    return(acset_phased)    
+}
+
+phase_par <- function(jparam, paramset, acset, feat_filter = FALSE, bp_param = BiocParallel::SerialParam(), verbosity = 0){
+
+    verbose = R.utils::Verbose(threshold = -1)
+    R.utils::cat(verbose, jparam)
+    jparamset = paramset[jparam, ]
+
+    input = jparamset[, 'input']
+    weigh = jparamset[, 'weigh']
+    method = jparamset[, 'method']
+
+    ##phase
+    start.time = proc.time()
+    acset_phased = phase(acset, input = input, weigh = weigh, method = method, bp_param = bp_param, verbosity = verbosity)
+    end.time = proc.time()
+    pass.time = end.time - start.time
+
+    ##bind time and call params
+    acset_phased[['time']] = pass.time
+    acset_phased[['params']] = jparamset
+    
+    return(acset_phased)    
 }
 
 complexity_par <- function(jparam, paramset, acset, bp_param = BiocParallel::SerialParam(), verbosity = 0){
@@ -156,7 +217,7 @@ complexity_par <- function(jparam, paramset, acset, bp_param = BiocParallel::Ser
     
     ##subsample n.sel feats
     j.feats = jparamset[, 'n.feats']
-    pass_feats = sample(pass_feats, j.feats, replace = TRUE)
+    pass_feats = sample(pass_feats, j.feats, replace = FALSE)
     acset_filt = subset_feat(acset_filt, pass_feats)
 
     ##get dim post-filtering
@@ -209,25 +270,6 @@ get_postfilter_stats <- function(acset, paramset){
     filter2nvars = cbind(nfeats_prefilt, nvars_prefilt, nfeats_postfilt, nvars_postfilt)
     
     return(filter2nvars)
-}
-
-filter_acset <- function(acset, nmincells, nminvar = 2, feat_filter = FALSE){
-
-    if(feat_filter){
-
-        ##filter feats
-        acset = filter_feat_gt(acset, nmincells)
-
-    }else{ ##filter variants
-
-        ##filter vars
-        acset = filter_var_gt(acset, nmincells)
-
-        ##filter feats on number of vars
-        acset = filter_feat_nminvar(acset, nminvar)
-    }
-
-    return(acset)
 }
 
 filter_get_perf <- function(acset, min_acount, fc, nmincells, input, weigh, method, nminvar = 2, nfracflip = 0.5, feat_filter = FALSE, bp_param = BiocParallel::SerialParam(), verbosity = 0){
