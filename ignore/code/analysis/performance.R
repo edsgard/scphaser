@@ -324,8 +324,30 @@ synt_flip <- function(acset, nfracflip, input, weigh, method, bp_param = BiocPar
 ##start with gt where all vars are initially phased (no vars should be flipped)
 ##then randomly flip nfracflip variants
 
-    ##randomly flip nfracflip vars
-    acset_synt = rand_flip(acset, nfracflip)
+    featdata = acset$featdata
+    gt = acset$gt
+    
+    ##Randomly flip nfracflip vars
+    vars = featdata$var
+    nvars = length(vars)
+    nflip = round(nfracflip * nvars)
+    vars_flip = sample(vars, nflip)
+
+    gt_compl = compl_gt(gt)
+    gt[vars_flip, ] = gt_compl[vars_flip, ]
+    
+    if(!is.null(acset$refcount)){
+        refcount = acset$refcount
+        altcount = acset$altcount
+        newref = refcount
+        newalt = altcount
+        newref[vars_flip, ] = altcount[vars_flip, ]
+        newalt[vars_flip, ] = refcount[vars_flip, ]
+        
+        acset_synt = new_acset(featdata = featdata, gt = gt, refcount = newref, altcount = newalt)
+    }else{
+        acset_synt = new_acset(featdata = featdata, gt = gt)
+    }
         
     ##phase
     acset_synt = phase(acset_synt, input = input, weigh = weigh, method = method, bp_param = bp_param, verbosity = verbosity)
@@ -333,8 +355,8 @@ synt_flip <- function(acset, nfracflip, input, weigh, method, bp_param = BiocPar
     
     ##*###
     ##Set observed flips to the complement if closer to exp_compl
-    ##*###
-
+    ##*###    
+    
     ##binarize vars known to be flipped (expected)
     vars_flip_bin = as.integer(vars %in% vars_flip)
     varsflip_exp = cbind(vars, featdata[vars, 'feat'], vars_flip_bin)

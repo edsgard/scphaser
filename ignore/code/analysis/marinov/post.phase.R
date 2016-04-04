@@ -138,7 +138,7 @@ main <- function(){
             ##Background
             gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
 
-            ##x ticks
+            ##ticks
             gg = gg + theme(axis.text.x = element_text(colour="black"), axis.text.y = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
 
             ##gg = gg + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
@@ -156,7 +156,7 @@ main <- function(){
     ##table
     j.rds = file.path(rds_dir, paste('monoase_', mono.ase, sep = ''), 'param2perf.rds')
     param2perf = readRDS(j.rds)
-    dplyr::filter(param2perf, nmincells == 5, fc == 3, min_acount == 3)
+    param2perf.filt = dplyr::filter(param2perf, nmincells == 5, fc == 3, min_acount == 3)
     ##gt.exhaust.true:
     ##0.05 -> 0.045, n.err=24, n.feat=533, n.vars=1,367
     ##0.1 -> 0.043, n.err=23, n.feat=534, n.vars=1,363
@@ -165,6 +165,23 @@ main <- function(){
     ##0.05 -> 0.053, 28
     ##0.1 -> 0.0506, n.err=27
     ##0.2 -> 0.053, n.err=28
+
+    
+    ##*###
+    ##Barplot
+    ##*###
+    feat.frac.right = 1 - param2perf.filt[, 'feat.frac.err']
+    param2perf.filt = cbind(param2perf.filt, feat.frac.right)
+    gg = ggplot(param2perf.filt, aes_string(x = 'in.meth.w', y = 'feat.frac.right'))
+    gg = gg + geom_bar(stat = 'identity')
+    gg = gg + xlab('') + ylab('Fraction correctly phased genes')
+    gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
+    gg = gg + theme(axis.text.x = element_text(colour="black"), axis.text.y = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
+    gg = gg + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+    gg = gg + geom_hline(yintercept = 0.95, colour = 'gray', linetype = 'dashed')
+    ##gg = gg + scale_y_continuous(breaks = c(seq(0, 1, 0.1), 0.95))
+    gg = gg + scale_y_continuous(breaks = c(seq(0, 1, 0.25), 0.9, 0.95))
+    print(gg)
 
     
     ##*###

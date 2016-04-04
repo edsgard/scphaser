@@ -27,7 +27,26 @@ main <- function(data_list){
     factor.cols = unlist(lapply(featdata, is.factor))
     featdata[, factor.cols] = lapply(featdata[, factor.cols], as.character)
 
-
+    ##check number of starting genes with at least two variants
+    feat2nvars = table(featdata[, 'feat'])
+    length(feat2nvars) #14,550
+    feat.pass = names(feat2nvars)[feat2nvars > 1]
+    length(feat.pass) #12,948
+    feat.filt = merge(featdata, as.matrix(feat.pass), by.x = 'feat', by.y = 1)
+    length(unique(feat.filt[, 'feat'])) #12948
+    nrow(feat.filt) #174,831
+    
+    ##Dump for annovar annot
+    ##chromosome, start position, end position, the reference nucleotides and the observed nucleotides
+    ##In some cases, users may want to specify only positions but not the actual nucleotides. In that case, "0" can be used to fill in the 4th and 5th column
+    n.vars = nrow(feat.filt)
+    ref = rep(0, n.vars)
+    alt = ref
+    feat.filt = cbind(feat.filt, ref, alt)
+    j.tab = file.path(data_dir, 'vars.twovargenes.anno')
+    write.table(feat.filt[, c('chr', 'pos', 'pos', 'ref', 'alt')], sep = '\t', col.names = FALSE, row.names = FALSE, quote = FALSE, file = j.tab)
+    
+    
     ##*###
     ##Count data
     ##*###

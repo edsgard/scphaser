@@ -13,7 +13,7 @@ out_data_dir = './ignore/res/mousehybrid/perf/data'
 out_pdf_dir = './ignore/res/mousehybrid/perf/pdf'
 
 ##Files
-perf_rds = file.path(out_data_dir, 'perf.full.rds')
+perf_rds = file.path(out_data_dir, 'perf.ngenes_100.rds')
 
 ##Libs
 source('./ignore/code/analysis/performance.R')
@@ -87,18 +87,22 @@ main <- function(){
     weigh = c(TRUE, FALSE)    
         
     ##permutation iterations
+    npermiter = 1
     npermiter = 10
     perm_iter = 1:npermiter
 
     ##min read count for genotyping
     min_acount = c(3, 5, 10)
+    min_acount = c(3)
     
     ##allelic fold-change for mono-allelic call
     fc = c(3, 4, 5)
+    fc = c(3)
     
     ##filter vars on min number of cells with mono-allelic call
     nmincells = c(3, 5, 10)
-
+    nmincells = c(5)
+    
     ##specify paramset as all possible combinations of the params
     paramset = expand.grid(perm_iter, min_acount, fc, nmincells, input, weigh, method, stringsAsFactors = FALSE)
     colnames(paramset) = c('perm_iter', 'min_acount', 'fc', 'nmincells', 'input', 'weigh', 'method')
@@ -118,7 +122,8 @@ main <- function(){
     nparamset = nrow(paramset)
     perf_list = BiocParallel::bplapply(1:nparamset, filter_get_perf_par, BPPARAM = bp_param, paramset = paramset, acset = acset, verbosity = verbosity)
     perf_df = do.call(rbind, perf_list)
-
+    ##status: sub
+    
     ##bind params and perf
     params2perf_df = cbind(paramset, perf_df)    
 

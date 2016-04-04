@@ -221,7 +221,7 @@ python3 ${srcdir}/snp2hapalleles.py $posfile $g1 $g2 --chr_fieldpos 2 --g1_field
 #status: fin
 cat ref2mat2pat.het.dbsnp.refseq.hap | head -100 #OK. ref,alt and hap alleles agree:)
 
-#NOW, convert from 0- to 1-based since samtools view is 1-based (http://www.htslib.org/doc/samtools-0.1.19.html). samtools mpileup is therefore also most likely 1-based.
+#NOW, convert from 0- to 1-based since samtools view is 1-based (http://www.htslib.org/doc/samtools-0.1.19.html). samtools mpileup is therefore also 1-based.
 mv ref2mat2pat.het.dbsnp.refseq.hap ref2mat2pat.het.dbsnp.refseq.hap.0based
 awk -F'\t' -v OFS='\t' '{print $2"."$3+1, $2, $3+1, $4, $5, $6, $7, $8, $9+1, $10+1, $11, $12;}' ref2mat2pat.het.dbsnp.refseq.hap.0based >ref2mat2pat.het.dbsnp.refseq.hap.1based
 
@@ -246,9 +246,43 @@ snpdir='/mnt/kauffman/edsgard/rsync/work/rspd/data/external/gerstein_NA12878/var
 cd $snpdir
 cat hg19.trio.het.pass.vcf | awk -F '\t' -v OFS='\t' '$10 ~ /\|/' >hg19.trio.het_phased.pass.vcf
 wc -l hg19.trio.het_phased.pass.vcf #2,327,432 -> 1,899,089
-awk '$3 != "." && $3 != "" {print $3;}' hg19.trio.het_phased.pass.vcf >hg19.trio.het_phased.pass.rsid
+awk '$3 != "." && $3 != "" {print $3;}' hg19.trio.het_phased.pass.vcf | sort >hg19.trio.het_phased.pass.rsid
 wc -l *.rsid #1,850,225
 cp -p hg19.trio.het_phased.pass.rsid /mnt/kauffman/edsgard/cloud/btsync/work/rspd/data/external/Marinov_GenRes_2014/.
+
+#join with ref2mat2pat.het.dbsnp.refseq.hap.1based
+sort -k6,6 ref2mat2pat.het.dbsnp.refseq.hap.1based >file.tmp
+join -1 1 -2 6 hg19.trio.het_phased.pass.rsid file.tmp >ref2mat2pat.het.dbsnp.refseq.trio_phased.hap.1based
+wc -l ref2mat2pat.het.dbsnp.refseq.trio_phased.hap.1based #830,200 -> 689,360
+
+
+#######
+#Filter on genes with at least two variants
+########
+cut -d' ' -f7 ref2mat2pat.het.dbsnp.refseq.trio_phased.hap.1based | sort | uniq -c >gene2nvars
+wc -l gene2nvars #18,447
+cat gene2nvars | awk '$1 >1 {print $0;}' >gene2nvars.minvars_2
+wc -l gene2nvars.minvars_2 #15,597. Including introns
+
+
+########
+#Filter out intronic vars
+########
+#original: exonic, exonic;splicing, intronic, ncRNA_exonic, ncRNA_intronic, ncRNA_splicing, splicing, UTR3, UTR5, UTR5;UTR3
+#rm: intronic, ncRNA_intronic
+
+awk -v '$8 !~ /intronic/ {print $0;}' ref2mat2pat.het.dbsnp.refseq.trio_phased.hap.1based >ref2mat2pat.het.dbsnp.refseq.trio_phased.nointrons.hap.1based
+wc -l ref2mat2pat.het.dbsnp.refseq.trio_phased.nointrons.hap.1based #689,360 -> 28,995
+#double-check
+grep -v 'intronic' ref2mat2pat.het.dbsnp.refseq.trio_phased.hap.1based | wc -l #28,995
+
+cut -d' ' -f7 ref2mat2pat.het.dbsnp.refseq.trio_phased.nointrons.hap.1based | sort | uniq -c >gene2nvars
+wc -l gene2nvars #10,661
+cat gene2nvars | awk '$1 >1 {print $0;}' >gene2nvars.minvars_2
+wc -l gene2nvars.minvars_2 #6,065. Excluding introns.
+
+
+#ref2mat2pat.het.dbsnp.refseq.trio_phased.hap.1based
 
 
 ##########
