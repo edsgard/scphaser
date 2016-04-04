@@ -13,7 +13,7 @@ out_data_dir = './ignore/res/mousehybrid/perf/data'
 out_pdf_dir = './ignore/res/mousehybrid/perf/pdf'
 
 ##Files
-perf_rds = file.path(out_data_dir, 'perf.ngenes_100.rds')
+perf_rds = file.path(out_data_dir, 'perf.ngenes_100.nparams_8.rds')
 
 ##Libs
 source('./ignore/code/analysis/performance.R')
@@ -121,8 +121,12 @@ main <- function(){
     ##loop param set
     nparamset = nrow(paramset)
     perf_list = BiocParallel::bplapply(1:nparamset, filter_get_perf_par, BPPARAM = bp_param, paramset = paramset, acset = acset, verbosity = verbosity)
-    perf_df = do.call(rbind, perf_list)
-    ##status: sub
+    var_list = lapply(perf_list, '[[', 'var')
+    feat_list = lapply(perf_list, '[[', 'feat')
+    var_perf_df = do.call(rbind, var_list)
+    feat_perf_df = do.call(rbind, feat_list)
+    perf_df = cbind(var_perf_df, feat_perf_df)
+    ##status: fin
     
     ##bind params and perf
     params2perf_df = cbind(paramset, perf_df)    
@@ -134,6 +138,12 @@ main <- function(){
     params2perf_df = cbind(params2perf_df, filter2nvars_nfeats)
     params2perf_df = tidyr::unite(params2perf_df, in.meth.w, input, method, weigh, remove = FALSE, sep = '.')
 
+    var.n.err = params2perf_df[, 'fp'] + params2perf_df[, 'fn']
+    var.frac.err = var.n.err / params2perf_df[, 'nvars_postfilt']
+    feat.n.err = params2perf_df[, 'n_feats'] - params2perf_df[, 'n_identical']
+    feat.frac.err = feat.n.err / params2perf_df[, 'n_feats']
+    params2perf_df = cbind(params2perf_df, var.n.err, var.frac.err, feat.n.err, feat.frac.err)
+        
     ##Dump
     saveRDS(params2perf_df, file = perf_rds)
     ##status: fin (2016.02.10: 15.38->16.12 (34min); 80 cores). #paramset: 2160 rows.
@@ -232,11 +242,8 @@ main <- function(){
     ##*###
     ##Number of errors (as in marinov/post.phase.R)
     ##*###
-    library('ggplot2')
-    n.err = params2perf_df[, 'fp'] + params2perf_df[, 'fn']
-    frac.err = n.err / params2perf_df[, 'nvars_postfilt']
-    params2perf_df = cbind(params2perf_df, n.err, frac.err)
-
+    library('ggplot2')    
+    
     y.resp = c('Number of vars', 'Fraction erronously phased vars', 'Number of genes')
     names(y.resp) = c('nvars_postfilt', 'frac.err', 'nfeats_postfilt')
     

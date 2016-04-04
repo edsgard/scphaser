@@ -166,6 +166,9 @@ main <- function(){
     ##0.1 -> 0.0506, n.err=27
     ##0.2 -> 0.053, n.err=28
 
+    ##mouse-hybrid data
+    mouse.rds = './ignore/res/mousehybrid/perf/data/perf.ngenes_100.nparams_8.rds'
+    m.param2perf = readRDS(mouse.rds)
     
     ##*###
     ##Barplot
