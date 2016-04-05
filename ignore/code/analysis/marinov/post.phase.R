@@ -166,17 +166,74 @@ main <- function(){
     ##0.1 -> 0.0506, n.err=27
     ##0.2 -> 0.053, n.err=28
 
+    ##*###
     ##mouse-hybrid data
+    ##*###
+
+    ##read data
     mouse.rds = './ignore/res/mousehybrid/perf/data/perf.ngenes_100.nparams_8.rds'
     m.param2perf = readRDS(mouse.rds)
+
+    ##add weigh.num
+    weigh.num = as.numeric(m.param2perf[, 'weigh'])
+    m.param2perf = cbind(m.param2perf, weigh.num);
+    which(unlist(lapply(m.param2perf, is.factor)))
+
+    ##median
+    which.quantile <- function (x, probs, na.rm = FALSE){
+        if (! na.rm & any (is.na (x)))
+            return (rep (NA_integer_, length (probs)))
+
+        o <- order (x)
+        n <- sum (! is.na (x))
+        o <- o [seq_len (n)]
+
+        nppm <- n * probs - 0.5
+        j <- floor(nppm)
+        h <- ifelse((nppm == j) & ((j%%2L) == 0L), 0, 1)
+        j <- j + h
+
+        j [j == 0] <- 1
+        o[j]
+    }
+    
+    a = split(m.param2perf, m.param2perf[, 'in.meth.w'])
+    b = lapply(a, function(j.perf){median.ind = which.quantile(j.perf[, 'feat.frac.err'], probs = 0.5, na.rm = TRUE); return(j.perf[median.ind, ]);})
+    b = lapply(a, function(j.perf){feat.frac.err = median(j.perf[, 'feat.frac.err']); var.frac.err = median(j.perf[, 'var.frac.err']); res = c(j.perf[1, 'in.meth.w'], feat.frac.err, var.frac.err);})
+    m.summ = as.data.frame(do.call(rbind, b), stringsAsFactors = FALSE)
+    colnames(m.summ) = c('in.meth.w', 'feat.frac.err', 'var.frac.err')
+    num.cols = c('feat.frac.err', 'var.frac.err')
+    m.summ[, num.cols] = lapply(m.summ[, num.cols], as.numeric)
+    
+    
+    ##fix colnames to be the same
+    m.cols = colnames(m.param2perf)
+    m.cols[grep('nvars_postfilt', m.cols)] = 'var.n'
+    m.cols[grep('nfeats_postfilt', m.cols)] = 'feat.n'    
+    colnames(m.param2perf) = m.cols    
+    
+    ##bind human and mouse perf
+    h.cols = colnames(param2perf)
+    m.cols = colnames(m.summ)
+    shared.cols = intersect(h.cols, m.cols)
+
+    dataset = rep('mouse', nrow(m.summ))
+    m.summ = cbind(m.summ, dataset, stringsAsFactors = FALSE)
+    dataset = rep('human', nrow(m.summ))
+    param2perf.filt = cbind(param2perf.filt, dataset, stringsAsFactors = FALSE)
+    shared.cols = c(shared.cols, 'dataset')
+    comb.perf = rbind(m.summ[, shared.cols], param2perf.filt[, shared.cols])
+
     
     ##*###
     ##Barplot
     ##*###
-    feat.frac.right = 1 - param2perf.filt[, 'feat.frac.err']
-    param2perf.filt = cbind(param2perf.filt, feat.frac.right)
-    gg = ggplot(param2perf.filt, aes_string(x = 'in.meth.w', y = 'feat.frac.right'))
+    gg.data = comb.perf
+    var.frac.right = 1 - gg.data[, 'var.frac.err']
+    gg.data = cbind(gg.data, var.frac.right)
+    gg = ggplot(gg.data, aes_string(x = 'in.meth.w', y = 'var.frac.right'))
     gg = gg + geom_bar(stat = 'identity')
+    gg = gg + facet_grid(~ dataset)
     gg = gg + xlab('') + ylab('Fraction correctly phased genes')
     gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
     gg = gg + theme(axis.text.x = element_text(colour="black"), axis.text.y = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
@@ -184,8 +241,12 @@ main <- function(){
     gg = gg + geom_hline(yintercept = 0.95, colour = 'gray', linetype = 'dashed')
     ##gg = gg + scale_y_continuous(breaks = c(seq(0, 1, 0.1), 0.95))
     gg = gg + scale_y_continuous(breaks = c(seq(0, 1, 0.25), 0.9, 0.95))
+    j.pdf = file.path(pdf_dir, 'frac.vars.err.mouse_human.pdf')
+    pdf.h = 3
+    pdf.w = 5
+    pdf(j.pdf, height = pdf.h, width = pdf.w)
     print(gg)
-
+    dev.off()
     
     ##*###
     ##TODO: Add inferred haplotype column to acset (ADD TO R-PACKAGE)
