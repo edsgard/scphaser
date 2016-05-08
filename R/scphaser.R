@@ -66,8 +66,8 @@ phase_feat <- function(acset, input = 'ac', weigh = TRUE, method = 'exhaust', nv
     vars = acset[['featdata']][, 'var']
     nvars = length(vars)        
     
-    if(method == 'cluster'){
-        ##can't do 2-class clustering on two observations
+    if(method == 'pam'){
+        ##can't do 2-class PAM clustering on two observations
         nvars_max = 2
     }
     
@@ -976,16 +976,30 @@ filter_homovars <- function(j.acset, alpha = 0.1, mono.ase = 0.5){
     n.altcells = apply(ase, 1, function(j.ase){length(which(j.ase > (1 - mono.ase)))})
     n.allele2cells = cbind(n.refcells, n.altcells, n.refcells + n.altcells)
     colnames(n.allele2cells) = c('ref', 'alt', 'sum')
+
+    bi.rs = rownames(n.allele2cells)[which(n.allele2cells[, 'sum'] == 0)]    
+    n.allele2cells = n.allele2cells[setdiff(rownames(n.allele2cells), bi.rs), ]
     
-    ##get binom pval
+    ##get binom pval    
     pvals = apply(n.allele2cells, 1, function(j.c){pvals = binom.test(j.c['alt'], j.c['sum'], p = 0.5, alternative = 'two.sided')$p.value})
     pass.rs = names(pvals)[which(pvals >= alpha)]
-
+    pass.rs = c(pass.rs, bi.rs)
+    
     ##filter
     j.acset = subset_rows(j.acset, pass.rs);
     
     return(j.acset)
 }    
+
+filter_zerorow <- function(acset){
+
+    totcount = acset[['altcount']] + acset[['refcount']]
+    rowcount = apply(totcount, 1, sum)
+    pass_rs = names(rowcount)[which(rowcount != 0)]
+    acset = subset_rows(acset, pass_rs)
+
+    return(acset)
+}
 
 call_gt <- function(acset, min_acount = 3, fc = 3){
 ###Simplistic genotype caller. Genotype callers often rely on DNA-specific assumptions.

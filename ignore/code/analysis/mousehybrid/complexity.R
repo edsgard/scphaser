@@ -9,8 +9,8 @@
 
 
 ##Dirs
-out_data_dir = './ignore/res/complexity/data'
-out_pdf_dir = './ignore/res/complexity/pdf'
+out_data_dir = './ignore/res/mousehybrid/complexity/data'
+out_pdf_dir = './ignore/res/mousehybrid/complexity/pdf'
 
 ##Files
 timing_rds = file.path(out_data_dir, 'timing.rds')
@@ -168,9 +168,22 @@ main <- function(){
     
     ##*###
     ##Post-phase analysis (plotting)
-    ##*###    
+    ##*###
+    library('ggplot2')
+
     res_df = readRDS(timing_rds)
 
+    ##Normalize by setting smallest time to one
+    res_by_ncells = res_df %>% group_by(in.meth.w, n.cells) %>% summarise(mean.t = mean(elapsed))
+    tmin_ncells = min(res_by_ncells[, 'mean.t'])
+    res_by_nfeats = res_df %>% group_by(in.meth.w, n.feats) %>% summarise(mean.t = mean(elapsed))
+    tmin_nfeats = min(res_by_nfeats[, 'mean.t'])
+    res_by_nvars = res_df %>% group_by(in.meth.w, n.vars) %>% summarise(mean.t = mean(elapsed))
+    tmin_nvars = min(res_by_nvars[, 'mean.t'])
+    tmin = c(tmin_ncells, tmin_nfeats, tmin_nvars)
+    names(tmin) = c('n.cells', 'n.feats', 'n.vars')
+
+    ##add numeric weigh col
     weigh.num = as.integer(as.logical(res_df[, 'weigh']))
     res_df = cbind(res_df, weigh.num)
     
@@ -181,52 +194,66 @@ main <- function(){
     lt.col = 'input'
     size.col = 'weigh.num'
 
-    library('ggplot2')
-    gg = ggplot(res_df, aes_string(x = x.str, y = y.str, group = group.col, colour = colour.col, linetype = lt.col, size = size.col))
-    gg = gg + geom_line()
-    gg = gg + scale_size(range = c(0.5, 1), breaks = c(0, 1), labels = c('FALSE', 'TRUE'))    
-    gg = gg + facet_grid(n.vars ~ n.feats, scales = 'free_y')
-    plot(gg)
+    j_res = res_df
+    j_res[, 'elapsed'] = j_res[, 'elapsed'] / tmin[x.str]
 
+    if(0){
+        gg = ggplot(j_res, aes_string(x = x.str, y = y.str, group = group.col, colour = colour.col, linetype = lt.col, size = size.col))
+        gg = gg + geom_line()
+        gg = gg + scale_size(range = c(0.5, 1), breaks = c(0, 1), labels = c('FALSE', 'TRUE'))    
+        gg = gg + facet_grid(n.vars ~ n.feats, scales = 'free_y')
+        plot(gg)
+    }
+    
     ##time2ncells
     x.str = 'n.cells'
-    j.pdf = file.path(out_pdf_dir, 'time2ncells.pdf')
-    gg = ggplot(res_df, aes_string(x = x.str, y = y.str, group = group.col, colour = colour.col, linetype = lt.col, size = size.col))
+    j.pdf = file.path(out_pdf_dir, 'time2ncells.scaled.pdf')
+    gg = ggplot(j_res, aes_string(x = x.str, y = y.str, group = group.col, colour = colour.col, linetype = lt.col, size = size.col))
     gg = gg + stat_summary(fun.y = 'mean', geom = 'line')
     gg = gg + scale_size(range = c(0.5, 1), breaks = c(0, 1), labels = c('FALSE', 'TRUE'))
-    gg = gg + facet_wrap(~ n.vars, scales = 'free')
+    gg = gg + facet_wrap(~ n.vars, scales = 'free', ncol = 2)
 
     ##Background
     gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
     gg = gg + theme(axis.text = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
 
+    ##plot
     pdf(j.pdf)
     plot(gg)
     dev.off()
+
     
     ##time2nfeats
     x.str = 'n.feats'
-    j.pdf = file.path(out_pdf_dir, 'time2ngenes.pdf')
-    gg = ggplot(res_df, aes_string(x = x.str, y = y.str, group = group.col, colour = colour.col, linetype = lt.col, size = size.col))
+    j_res = res_df
+    j_res[, 'elapsed'] = j_res[, 'elapsed'] / tmin[x.str]
+    j.pdf = file.path(out_pdf_dir, 'time2ngenes.scaled.pdf')
+    gg = ggplot(j_res, aes_string(x = x.str, y = y.str, group = group.col, colour = colour.col, linetype = lt.col, size = size.col))
     gg = gg + stat_summary(fun.y = 'mean', geom = 'line')
     gg = gg + scale_size(range = c(0.5, 1), breaks = c(0, 1), labels = c('FALSE', 'TRUE'))
-    gg = gg + facet_wrap(~ n.vars, scales = 'free')
+    gg = gg + facet_wrap(~ n.vars, scales = 'free', ncol = 2)
 
     ##Background
     gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
     gg = gg + theme(axis.text = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
 
+    ##Plot
     pdf(j.pdf)
     plot(gg)
     dev.off()
 
+    
     ##time2nvars
-    ##rm
-    res_df_filt = filter(res_df, n.vars != 2)
-    pdf.h = 4
-    pdf.w = 4
     x.str = 'n.vars'
-    j.pdf = file.path(out_pdf_dir, 'time2nvars.pdf')
+    j_res = res_df
+    j_res[, 'elapsed'] = j_res[, 'elapsed'] / tmin[x.str]
+
+    res_df_filt = filter(j_res, n.vars != 2)
+
+    ##rm
+    pdf.h = 2.3
+    pdf.w = 4.2
+    j.pdf = file.path(out_pdf_dir, 'time2nvars.scaled.pdf')
     gg = ggplot(res_df_filt, aes_string(x = x.str, y = y.str, group = group.col, colour = colour.col, linetype = lt.col, size = size.col))
     gg = gg + stat_summary(fun.y = 'mean', geom = 'line')
     gg = gg + scale_size(range = c(0.5, 1), breaks = c(0, 1), labels = c('FALSE', 'TRUE'))

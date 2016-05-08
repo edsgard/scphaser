@@ -64,7 +64,7 @@ main <- function(){
     alpha = 0.1
     mono.ase = 0.2
     if(!mono.ase == 0){
-        phased.filt2 = lapply(phased.filt, filter_nonrandomase, alpha = alpha, mono.ase = mono.ase)
+        phased.filt2 = lapply(phased.filt, filter_homovars, alpha = alpha, mono.ase = mono.ase)
     }else{
         phased.filt2 = phased.filt
     }
