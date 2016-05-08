@@ -48,9 +48,24 @@ main <- function(){
     hap.filt = hap.ac[which(tot.ac >= min.count), ]
     nrow(hap.filt) #123,318
     ase = hap.filt[, 'cast.ac'] / (hap.filt[, 'cast.ac'] + hap.filt[, 'c57.ac'])
+    ase.dens = density(ase, from = 0, to = 1)
 
+    ##dens2df
+    ase = ase.dens[['x']]
+    nvar.dens = ase.dens[['y']]
+    n.breaks = length(ase)
+    cell = rep('bulk', n.breaks)
+    j.mat = cbind(ase, nvar.dens, cell)
+    ase2nvar.dens.df = as.data.frame(j.mat, stringsAsFactors = FALSE)
+    ase2nvar.dens.df[, 'ase'] = as.numeric(ase2nvar.dens.df[, 'ase'])
+    ase2nvar.dens.df[, 'nvar.dens'] = as.numeric(ase2nvar.dens.df[, 'nvar.dens'])
+    
+    ##Dump
+    saveRDS(ase2nvar.dens.df, file = file.path(data.dir, 'ase2nvars.dens.rds'))
+
+    ##Plot
     pdf(file = 'bulk.ase.pdf')
-    plot(density(ase))
+    plot(ase.dens)
     dev.off()
 }
 

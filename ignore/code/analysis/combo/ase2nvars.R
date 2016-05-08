@@ -17,7 +17,7 @@ if(sys == 'rs13'){
 }
 
 ##IN
-in.dirs = c('../nogit/data/marinov', '../nogit/data/borel', '../nogit/data/mousehybrid')
+in.dirs = c('../nogit/data/marinov', '../nogit/data/borel', '../nogit/data/mousehybrid', '../nogit/data/mousehybrid/bulk')
 names(in.dirs) = basename(in.dirs)
 
 ##OUT
@@ -44,6 +44,8 @@ main <- function(){
     ase.df = melt(ase.list, id.vars = c('ase', 'cell', 'nvar.dens'))
     colnames(ase.df)[ncol(ase.df)] = 'dataset'
 
+    ase.df[, 'dataset'] = factor(ase.df[, 'dataset'], levels = c('borel', 'marinov', 'mousehybrid', 'bulk'))
+    
     ##*###
     ##Plot
     ##*###
@@ -64,7 +66,7 @@ main <- function(){
     gg = gg + ylab('Number of variants (density)')
 
     ##plot
-    j.pdf = file.path(pdf_dir, 'ase2nvars.dens.pdf')
+    j.pdf = file.path(pdf_dir, 'ase2nvars.dens.wbulk.pdf')
     pdf.w = 4.5
     pdf.h = 3
     pdf(j.pdf, height = pdf.h, width = pdf.w)
