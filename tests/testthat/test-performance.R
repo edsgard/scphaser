@@ -24,6 +24,8 @@ gt_matpat <- function(){
     ##featdata
     nvars = nrow(gt)
     featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    feat_cols = colnames(featdata)
+    featdata[, feat_cols] = lapply(featdata[, feat_cols], as.character)
     
     ##create acset
     acset = new_acset(featdata, gt = gt)
@@ -56,7 +58,9 @@ ac_matpat <- function(){
     ##featdata
     nvars = length(vars)
     featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)    
-    
+    feat_cols = colnames(featdata)
+    featdata[, feat_cols] = lapply(featdata[, feat_cols], as.character)
+
     ##create acset
     acset = new_acset(featdata, altcount = altcount, refcount = refcount)
 
@@ -80,8 +84,14 @@ test_that('racset permutes allele counts with fixed rowmargins', {
     ncols = nels / nrows
     refcount = matrix(sample(1:nels, nels), nrow = nrows, dimnames = list(1:nrows, 1:ncols))
     altcount = matrix(sample((nels+1):(nels*2), nels), nrow = nrows, dimnames = list(1:nrows, 1:ncols))
+    
+    ##featdata
+    nvars = nrow(refcount)
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    feat_cols = colnames(featdata)
+    featdata[, feat_cols] = lapply(featdata[, feat_cols], as.character)
 
-    acset = new_acset(rownames(refcount), refcount, altcount)
+    acset = new_acset(featdata, refcount, altcount)
 
     ##randomize
     rac = racset(acset, type = 'ac', fixedrowmargin = TRUE)
@@ -273,8 +283,8 @@ gt_prephased <- function(){
 
     ##featdata
     nvars = nrow(gt)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
-    
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
+
     ##create acset
     acset = new_acset(featdata, gt = gt)
 
@@ -362,7 +372,7 @@ gt_matpat_varscore <- function(){
 
     ##featdata
     nvars = nrow(gt)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
     
     ##create acset
     acset = new_acset(featdata, gt = gt)

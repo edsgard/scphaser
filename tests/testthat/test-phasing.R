@@ -23,7 +23,7 @@ gt_matpat <- function(){
 
     ##featdata
     nvars = nrow(gt)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
     
     ##create acset
     acset = new_acset(featdata, gt = gt)
@@ -52,7 +52,7 @@ gt_matpat_twofeat <- function(){
     
     ##featdata
     nvars = nrow(gt)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
 
     ##double up
     gt = rbind(gt, gt)
@@ -93,7 +93,7 @@ ac_matpat <- function(){
     
     ##featdata
     nvars = length(vars)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
     
     ##create acset
     acset = new_acset(featdata, altcount = altcount, refcount = refcount)
@@ -128,7 +128,7 @@ gt_samephase <- function(){
 
     ##featdata
     nvars = nrow(gt)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
     
     ##create acset
     acset = new_acset(featdata, gt = gt)
@@ -160,7 +160,7 @@ ac_samephase <- function(){
     
     ##featdata
     nvars = length(vars)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
     
     ##create acset
     acset = new_acset(featdata, altcount = altcount, refcount = refcount)
@@ -195,8 +195,9 @@ gt_prephased <- function(){
     rownames(gt) = vars
 
     ##featdata
-    nvars = nrow(gt)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    nvars = nrow(gt)    
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
+
     
     ##create acset
     acset = new_acset(featdata, gt = gt)
@@ -227,9 +228,9 @@ ac_prephased <- function(){
     rownames(altcount) = vars
     
     ##featdata
-    nvars = length(vars)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
-    
+    nvars = length(vars)    
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
+
     ##create acset
     acset = new_acset(featdata, altcount = altcount, refcount = refcount)
 
@@ -264,8 +265,8 @@ ac_weighedtoflip <- function(){
     
     ##featdata
     nvars = length(vars)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
-    
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
+
     ##create acset
     acset = new_acset(featdata, altcount = altcount, refcount = refcount)
 
@@ -300,8 +301,8 @@ ac_weighedtonotflip <- function(){
     
     ##featdata
     nvars = length(vars)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
-    
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
+
     ##create acset
     acset = new_acset(featdata, altcount = altcount, refcount = refcount)
 
@@ -333,7 +334,7 @@ ac_onezerocol <- function(){
     
     ##featdata
     nvars = length(vars)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
     
     ##create acset
     acset = new_acset(featdata, altcount = altcount, refcount = refcount)
