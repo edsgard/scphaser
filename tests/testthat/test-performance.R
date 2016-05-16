@@ -86,8 +86,9 @@ test_that('racset permutes allele counts with fixed rowmargins', {
     altcount = matrix(sample((nels+1):(nels*2), nels), nrow = nrows, dimnames = list(1:nrows, 1:ncols))
     
     ##featdata
-    nvars = nrow(refcount)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), 1:nvars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
+    vars = rownames(refcount)
+    nvars = length(vars)
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), vars), ncol = 2, dimnames = list(vars, c('feat', 'var'))))
     feat_cols = colnames(featdata)
     featdata[, feat_cols] = lapply(featdata[, feat_cols], as.character)
 
