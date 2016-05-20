@@ -29,11 +29,14 @@ phase <- function(acset, input = 'gt', weigh = FALSE, method = 'exhaust', nvars_
     res_list = BiocParallel::bplapply(1:nfeats, phase_feat_subset, BPPARAM = bp_param, feat2var_list = feat2var_list, acset = acset, input = input, weigh = weigh, method = method, nvars_max = nvars_max, verbosity = verbosity)
     names(res_list) = feats
     
-    ##store
+    ##store varflip and score
     varflip[unlist(lapply(res_list, '[[', 'vars2flip'))] = TRUE
     score = unlist(lapply(res_list, '[[', 'stat'))
     acset[['varflip']] = names(varflip)[which(varflip)]
     acset[['score']] = score
+
+    ##store haplotype in terms of ref and alt alleles
+    acset = set_haplotype(acset)
     
     ##store gt matrix where varflip vars are phased to the complementary gentoype
     acset = set_phased_gt(acset)
@@ -649,6 +652,12 @@ new_acset <- function(featdata, refcount = NA, altcount = NA, phenodata = NA, gt
     if(!('feat' %in% colnames(featdata))){
         stop('featdata require a column named "feat"')
     }
+    if(!('ref' %in% colnames(featdata))){
+        stop('featdata require a column named "ref"')
+    }
+    if(!('alt' %in% colnames(featdata))){
+        stop('featdata require a column named "alt"')
+    }
     if(!('sample' %in% colnames(phenodata))){
         stop('phenodata require a column named "sample"')
     }
@@ -657,6 +666,12 @@ new_acset <- function(featdata, refcount = NA, altcount = NA, phenodata = NA, gt
     }
     if(!(is.character(featdata[, 'feat']))){
         stop('The column "feat" in featdata need to be of class "character"')
+    }
+    if(!(is.character(featdata[, 'ref']))){
+        stop('The column "ref" in featdata need to be of class "character"')
+    }
+    if(!(is.character(featdata[, 'alt']))){
+        stop('The column "alt" in featdata need to be of class "character"')
     }
     if(!(is.data.frame(featdata))){
         stop('featdata need to be a data-frame')
@@ -735,6 +750,10 @@ subset_rows <- function(acset, sel.ind){
         feat_structs = c(feat_structs, 'weights')
     }    
 
+    if('phasedfeat' %in% names(acset)){
+        feat_structs = c(feat_structs, 'phasedfeat')
+    }        
+    
     ##subset
     acset[feat_structs] = lapply(acset[feat_structs], function(j.obj){j.obj[sel.ind, ]})    
 
@@ -1034,6 +1053,28 @@ call_gt <- function(acset, min_acount = 3, fc = 3){
     ##store filter argument
     acset[['args']][['filter']][c('min_acount', 'fc')] = list(min_acount = min_acount, fc = fc)
 
+    return(acset)
+}
+
+set_haplotype <- function(acset){
+##NB: The phasing is performend independently per feature, therefore, between two features we do not if there are switches in the haplotype or not.
+
+    featdata = acset[['featdata']]
+    varflip = acset[['varflip']]
+    
+    vars = rownames(featdata)
+    hapA = featdata[, 'ref']
+    hapB = featdata[, 'alt']
+    names(hapA) = vars
+    names(hapB) = vars
+    hapA[varflip] = featdata[varflip, 'alt']
+    hapB[varflip] = featdata[varflip, 'ref']
+    
+    phasedfeat = featdata[, c('feat', 'var', 'ref', 'alt')]
+    phasedfeat = cbind(phasedfeat, hapA, hapB, stringsAsFactors = FALSE)
+
+    acset[['phasedfeat']] = phasedfeat
+    
     return(acset)
 }
 

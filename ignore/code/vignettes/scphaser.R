@@ -76,13 +76,13 @@ length(unique(acset$featdata$feat))
 ##' ##Phase
 ##+
 ##acset = phase(acset, input = 'ac', weigh = FALSE, method = 'exhaust')
-##acset = phase(acset, input = 'ac', weigh = FALSE, method = 'cluster')
+##acset = phase(acset, input = 'ac', weigh = FALSE, method = 'pam')
 ##acset = phase(acset, input = 'ac', weigh = TRUE, method = 'exhaust')
-##acset = phase(acset, input = 'ac', weigh = TRUE, method = 'cluster')
+##acset = phase(acset, input = 'ac', weigh = TRUE, method = 'pam')
 
 ##acset = phase(acset, input = 'gt', weigh = TRUE, method = 'exhaust')
-##acset = phase(acset, input = 'gt', weigh = TRUE, method = 'cluster')
-##acset = phase(acset, input = 'gt', weigh = FALSE, method = 'cluster')
+##acset = phase(acset, input = 'gt', weigh = TRUE, method = 'pam')
+##acset = phase(acset, input = 'gt', weigh = FALSE, method = 'pam')
 acset = phase(acset, input = 'gt', weigh = FALSE, method = 'exhaust', verbosity = 0)
 
 lapply(acset, dim)

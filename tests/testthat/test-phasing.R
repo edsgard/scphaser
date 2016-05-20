@@ -13,9 +13,9 @@ gt_matpat <- function(){
     paternal = c(0, 2, 0, 0, 2)
     maternal = c(2, 0, 2, 2, 0)
 
-    ##expected variants to be flipped: (TBD: possibly c(1, 3, 4))
+    ##expected variants to be flipped: 
     vars2flip_expected = list(as.character(c(2, 5)), as.character(c(1, 3, 4)))
-
+    
     gt = as.matrix(as.data.frame(rep(list(paternal, maternal), ncells / 2)))
     vars = 1:nrow(gt)
     colnames(gt) = 1:ncells
@@ -23,7 +23,7 @@ gt_matpat <- function(){
 
     ##featdata
     nvars = nrow(gt)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4, dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors = FALSE)
     
     ##create acset
     acset = new_acset(featdata, gt = gt)
@@ -42,7 +42,7 @@ gt_matpat_twofeat <- function(){
     paternal = c(0, 2, 0, 0, 2)
     maternal = c(2, 0, 2, 2, 0)
 
-    ##expected variants to be flipped: (TBD: possibly c(1, 3, 4))
+    ##expected variants to be flipped: 
     vars2flip_expected = list(jfeat = list(as.character(c(2, 5)), as.character(c(1, 3, 4))), jfeat2 = list(as.character(c(6, 8, 9)), as.character(c(7, 10))))
     
     gt = as.matrix(as.data.frame(rep(list(paternal, maternal), ncells / 2)))
@@ -52,7 +52,7 @@ gt_matpat_twofeat <- function(){
     
     ##featdata
     nvars = nrow(gt)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4, dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors = FALSE)
 
     ##double up
     gt = rbind(gt, gt)
@@ -67,6 +67,55 @@ gt_matpat_twofeat <- function(){
     acset = new_acset(featdata, gt = gt)
 
     return(list(acset = acset, exp = vars2flip_expected))
+}
+
+gt_matpat_hap <- function(){
+
+
+    ##*###
+    ##Half of the cells maternal, half paternal
+    ##*###
+
+    ##create gt matrix
+    ncells = 10
+    paternal = c(0, 2, 0, 0, 2)
+    maternal = c(2, 0, 2, 2, 0)
+
+    ##expected variants to be flipped
+    vars2flip_expected = list(as.character(c(2, 5)), as.character(c(1, 3, 4)))
+    
+    gt = as.matrix(as.data.frame(rep(list(paternal, maternal), ncells / 2)))
+    vars = 1:nrow(gt)
+    colnames(gt) = 1:ncells
+    rownames(gt) = vars
+    
+    ##featdata
+    nvars = nrow(gt)
+    ref = c('A', 'G', 'G', 'C', 'T')
+    alt = c('G', 'C', 'T', 'A', 'C')
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars), ref, alt), ncol = 4, dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors = FALSE)
+
+    ##expected haplotype
+    j_exp = vars2flip_expected[[1]]
+
+    vars = rownames(featdata)
+    hapA = featdata[, 'ref']
+    hapB = featdata[, 'alt']
+    names(hapA) = vars
+    names(hapB) = vars
+    hapA[j_exp] = featdata[j_exp, 'alt']
+    hapB[j_exp] = featdata[j_exp, 'ref']
+    
+    ab = as.data.frame(cbind(hapA, hapB), stringsAsFactors = FALSE)
+    ba = ab[, c('hapB', 'hapA')]
+    colnames(ba) = colnames(ab)
+    hap_exp = list(ab = ab, ba = ba)
+    
+    ##create acset
+    acset = new_acset(featdata, gt = gt)
+
+    res = list(acset = acset, exp = vars2flip_expected, hapexp = hap_exp)
+    return(res)
 }
 
 ac_matpat <- function(){
@@ -93,8 +142,8 @@ ac_matpat <- function(){
     
     ##featdata
     nvars = length(vars)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
-    
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4, dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors = FALSE)
+
     ##create acset
     acset = new_acset(featdata, altcount = altcount, refcount = refcount)
 
@@ -119,7 +168,7 @@ gt_samephase <- function(){
     paternal = c(0, 2, 0, 0, 2)
     gt = as.matrix(as.data.frame(rep(list(paternal), ncells)))
     
-    ##expected variants to be flipped: (TBD: possibly c(1, 3, 4))
+    ##expected variants to be flipped:
     vars2flip_exp = list(as.character(c(2, 5)), as.character(c(1, 3, 4)))
     
     vars = 1:nrow(gt)
@@ -127,9 +176,9 @@ gt_samephase <- function(){
     rownames(gt) = vars
 
     ##featdata
-    nvars = nrow(gt)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
-    
+    nvars = nrow(gt)    
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4, dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors = FALSE)
+
     ##create acset
     acset = new_acset(featdata, gt = gt)
 
@@ -160,8 +209,8 @@ ac_samephase <- function(){
     
     ##featdata
     nvars = length(vars)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
-    
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4, dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors = FALSE)
+
     ##create acset
     acset = new_acset(featdata, altcount = altcount, refcount = refcount)
 
@@ -187,7 +236,7 @@ gt_prephased <- function(){
     paternal = c(0, 0, 0, 0, 0)
     gt = as.matrix(as.data.frame(rep(list(paternal), ncells)))
     
-    ##expected variants to be flipped: (TBD: possibly c(1, 3, 4))
+    ##expected variants to be flipped: 
     vars2flip_exp = character(0)
     
     vars = 1:nrow(gt)
@@ -196,7 +245,7 @@ gt_prephased <- function(){
 
     ##featdata
     nvars = nrow(gt)    
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4, dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors = FALSE)
 
     
     ##create acset
@@ -229,7 +278,7 @@ ac_prephased <- function(){
     
     ##featdata
     nvars = length(vars)    
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4, dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors = FALSE)
 
     ##create acset
     acset = new_acset(featdata, altcount = altcount, refcount = refcount)
@@ -265,7 +314,7 @@ ac_weighedtoflip <- function(){
     
     ##featdata
     nvars = length(vars)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4, dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors = FALSE)
 
     ##create acset
     acset = new_acset(featdata, altcount = altcount, refcount = refcount)
@@ -301,7 +350,7 @@ ac_weighedtonotflip <- function(){
     
     ##featdata
     nvars = length(vars)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4, dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors = FALSE)
 
     ##create acset
     acset = new_acset(featdata, altcount = altcount, refcount = refcount)
@@ -334,8 +383,8 @@ ac_onezerocol <- function(){
     
     ##featdata
     nvars = length(vars)
-    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars)), ncol = 2, dimnames = list(vars, c('feat', 'var'))), stringsAsFactors = FALSE)
-    
+    featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars), as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4, dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors = FALSE)
+
     ##create acset
     acset = new_acset(featdata, altcount = altcount, refcount = refcount)
 
@@ -454,6 +503,29 @@ test_that('can phase gt where half cells maternal and half paternal', {
     res = wphase_cluster_gt(acset, vars)
     vars2flip = res$vars2flip
     expect_true(identical(vars2flip, exp_out[[1]]) | identical(vars2flip, exp_out[[2]]))            
+})
+
+test_that('haplotype output is correct', {
+
+    ##create gt matrix, providing gt as input
+    acset_exp = gt_matpat_hap()
+    acset = acset_exp$acset
+    exp_out = acset_exp$hapexp
+    vars = rownames(acset[['gt']])
+    
+    ##exhaust_gt
+    res = phase(acset, input = 'gt', weigh = FALSE, method = 'exhaust')
+    phasedfeat = res$phasedfeat
+    hapA = phasedfeat$hapA
+    hapB = phasedfeat$hapB
+    expect_true((identical(hapA, exp_out[[1]]$hapA) & identical(hapB, exp_out[[1]]$hapB)) | (identical(hapA, exp_out[[2]]$hapA) & identical(hapB, exp_out[[2]]$hapB)))
+
+    ##cluster_gt
+    res = phase(acset, input = 'gt', weigh = FALSE, method = 'pam')
+    phasedfeat = res$phasedfeat
+    hapA = phasedfeat$hapA
+    hapB = phasedfeat$hapB
+    expect_true((identical(hapA, exp_out[[1]]$hapA) & identical(hapB, exp_out[[1]]$hapB)) | (identical(hapA, exp_out[[2]]$hapA) & identical(hapB, exp_out[[2]]$hapB)))
 })
 
 test_that('can phase ase where half cells maternal and half paternal', {
