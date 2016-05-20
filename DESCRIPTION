@@ -1,6 +1,6 @@
 Package: scphaser
 Title: Phase Variants Within Genes Using Allele Counts
-Version: 0.0.0.9000
+Version: 0.9.2
 Authors@R: c(person("Daniel", "Edsgärd", email = 'edsgard@hotmail.com', role = c("aut", "cre")))
 Description: Phase variants within genes using allele counts from single-cell RNA-seq data.
 URL: https://github.com/edsgard/scphaser

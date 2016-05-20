@@ -24,9 +24,10 @@ if(sys == 'rs13'){
 }
 
 ##IN
-rds_dir = './ignore/res/marinov/data/filt_vcfphased_randomase'
+data_dir = '../nogit/data/marinov'
 
 ##OUT
+rds_dir = './ignore/res/marinov/data/filt_vcfphased_randomase'
 pdf_dir = './ignore/res/marinov/pdf/filt_vcfphased_randomase'
 
 ##*###
@@ -34,7 +35,7 @@ pdf_dir = './ignore/res/marinov/pdf/filt_vcfphased_randomase'
 ##*###
 
 ##IN
-phased_rds = file.path(rds_dir, 'phased.acset.rds')
+phased_rds = file.path(data_dir, 'phased.acset.rds')
 vcf.phased.rsid = file.path(cloud.dir, 'data/external/Marinov_GenRes_2014', 'hg19.trio.het_phased.pass.rsid')
 
 ##Libs
@@ -62,8 +63,8 @@ main <- function(){
     ##*###
 
     alpha = 0.1
-    mono.ase = 0.2
-    if(!mono.ase == 0){
+    mono.ase = 0.1
+    if(mono.ase != 0){
         phased.filt2 = lapply(phased.filt, filter_homovars, alpha = alpha, mono.ase = mono.ase)
     }else{
         phased.filt2 = phased.filt
@@ -78,6 +79,9 @@ main <- function(){
     ##mono.ase = 0.2: 81, 83
     ##0.1 -> 82, 84
     ##0.05 -> 82, 84
+
+    ##Dump
+    saveRDS(list(phased_list = phased.filt2, params = params), file = file.path(data_dir, 'phased.acset.filt_vcfphased_homoase.rds'))
 
     
     ##*###
