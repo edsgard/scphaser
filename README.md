@@ -22,5 +22,5 @@ which will walk you through a tutorial of how to phase variants using scphaser, 
 The function reference manual can be found at "inst/doc/scphaser.pdf"
 or you can use the ?fcn to get help, for example:
 ```R
-?new_acset
+?phase
 ```
