@@ -15,5 +15,12 @@ package repository, where installation can be done by:
 install.packages('scphaser')
 ```
 
-## Tutorial
-Once you've installed scphaser you will be able to follow the vignette, see "inst/doc/scphaser.html".
+## Tutorial and Reference Manual
+Once you've installed scphaser you will be able to follow the vignette
+which will walk you through a tutorial of how to phase variants using scphaser, see "inst/doc/scphaser.html".
+
+The function reference manual can be found at "inst/doc/scphaser.pdf"
+or you can use the ?fcn to get help, for example:
+```R
+?new_acset
+```

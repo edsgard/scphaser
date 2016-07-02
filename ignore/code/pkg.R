@@ -46,6 +46,9 @@ main <- function(){
     ##*###
     devtools::document()
 
+    ##Reference Manual
+    ##R CMD Rd2pdf git
+    ##cp -p git.pdf git/inst/doc/scphaser.pdf
     
     ##*##############
     ##Vignettes
