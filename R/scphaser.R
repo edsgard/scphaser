@@ -1,5 +1,76 @@
 
-
+#' Phasing of alleles
+#'
+#' \code{phase} phases alleles using allelic counts or genotype calls from
+#' single-cell RNA-seq data.
+#'
+#' The function phases alleles within each feature. As phasing is not done
+#' between features inferred haplotypes should only be used within features.
+#'
+#' @param acset An acset list created by the \code{\link{new_acset}} function.
+#' It must contain elements with either a genotype matrix or two matrixes
+#' containing the reference and alternative allele counts, respectively.
+#' @param input A character string specifying if allele counts or genotype calls
+#' should be used for phasing. Two values are allowed, 'gt' or 'ac'. 'gt'
+#' specifies that genotype calls should be used. 'ac' specifies that allele
+#' counts should be used.
+#' @param weigh A logical specifying if the sample-size, that is, the scale of
+#' the allele counts at a variant, should be taken into account. Variants with
+#' high counts will be given a greater weight as they are more reliable.
+#' @param method A character string specifying the clustering method to be used
+#' for the phasing. Two values are allowed, 'exhaust' or 'pam'.
+#' @param nvars_max An integer specifying the number of variants within a
+#' feature (e.g. gene), above which 'pam' clustering will be used even if the
+#' method argument was set to 'exhaust'.
+#' @param verbosity An integer specifying the verbosity level. Higher values
+#' increase the verbosity.
+#' @param bp_param A BiocParallelParam instance, see \code{\link[BiocParallel]{bplapply}}.
+#'
+#' @return An acset list with the following elements added by the phasing
+#' function:
+#' 'phasedfeat': Data-frame with six columns. Four first columns, 'feat',
+#' 'var', 'ref' and 'alt' are taken from the featdata data-frame of the input
+#' acset. The last two columns 'hapA' and 'hapB' contains the haplotype sequence
+#' of alleles.
+#' 'args': List where each element corresponds to argument values supplied to
+#' the phase function.
+#' 'varflip': Character vector with names of variants where the alleles were
+#' swapped.
+#' 'score': Numeric vector with a variability score per feature after phasing.
+#' 'gt_phased': Character matrix of genotypes after having swapped alleles
+#' according to the inferred phase.
+#' 'weights': Numeric matrix with a weight per variant and cell. Only added if
+#' arguments set as weigh == TRUE and input == 'gt'.
+#'
+#' @examples
+#' ##create a small artificial genotype matrix
+#' ncells = 10
+#' paternal = c(0, 2, 0, 0, 2)
+#' maternal = c(2, 0, 2, 2, 0)
+#' gt = as.matrix(as.data.frame(rep(list(paternal, maternal), ncells / 2)))
+#' vars = 1:nrow(gt)
+#' colnames(gt) = 1:ncells
+#' rownames(gt) = vars
+#'
+#' ##feature annotation data-frame
+#' nvars = nrow(gt)
+#' featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars),
+#' as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4,
+#' dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors =
+#' FALSE)
+#'
+#' ##create acset
+#' acset = new_acset(featdata, gt = gt)
+#'
+#' ##phase
+#' acset = phase(acset, input = 'gt', weigh = FALSE, method = 'exhaust',
+#' verbosity = 0)
+#'
+#' ##' The haplotype output is contained in an element of an acset list that was
+#' ##added by the phasing function and is named "phasedfeat":
+#' head(acset[['phasedfeat']])
+#' 
+#' @export
 phase <- function(acset, input = 'gt', weigh = FALSE, method = 'exhaust', nvars_max = 10, verbosity = -1, bp_param = BiocParallel::SerialParam()){
     
     ##feat2vars
@@ -606,6 +677,68 @@ counts2weight <- function(counts, p = 0.5){
     return(weight)
 }
 
+#' Construct an allele count set
+#'
+#' \code{new_acset} constructs a list which is the data-structure used by the
+#' scphaser phasing functions.
+#'
+#' The function performs a number of error-checks to ensure that the constructed
+#' acset-list elements satisfy the data-format used by the phasing functions.
+#'
+#' @param featdata Data-frame with four required columns and arbitrary
+#' additional columns. The purpose of the featdata data-frame is to map variants
+#' to features and specify the two alleles of each variant. The four required
+#' columns must be named 'feat', 'var', 'ref' and 'alt'. The rownames must also
+#' be set to be identical to the var column. 'feat' is a character vector
+#' specifying feature names, such as gene names. 'var' is a character vector
+#' specifying variant names, such as dbSNP rs id. 'ref' and 'alt' are character
+#' vectors specifying the alleles of each variant, such as the reference and
+#' alternative allele.
+#' @param refcount Matrix with allelic counts for the reference allele with
+#' variants as rows and cells as columns. The rownames have to match the values
+#' in the 'var' column in the featdata, and the colnames the values in the
+#' phenodata 'sample' column. If refcount is provided altcount must also be
+#' provided. If the gt argument is provided then refcount and altcount are not
+#' required arguments.
+#' @param altcount Matrix with allelic counts for the alternative allele, where
+#' the row- and col-names must match those of refcount.
+#' @param gt Matrix with integer values representing transcribed genotype calls.
+#' 0: reference allele most highly expressed, 1: bi-allelic expression with
+#' similar degree of expression from the two alleles, 2: alternative allele most
+#' highly expressed. NA's are allowed and can be used to indicate entries where
+#' no call could be made. The rownames have to match the values in the 'var'
+#' column in the featdata, and the colnames the values in the phenodata 'sample'
+#' column. If refcount and altcount are provided then the gt argument does not
+#' need to be provided.
+#' @param phenodata Data-frame which annotates the cells. It must contain a
+#' column named 'sample'. If the phenodata argument is not provided it is
+#' created by the \code{link{new_acset}} function with the sample column set to
+#' be identical to the column names of refcount or gt.
+#' 
+#' @return acset An acset list which contains elements required to apply the
+#' phasing functions.
+#'
+#' @examples
+#' ##create a small artificial genotype matrix
+#' ncells = 10
+#' paternal = c(0, 2, 0, 0, 2)
+#' maternal = c(2, 0, 2, 2, 0)
+#' gt = as.matrix(as.data.frame(rep(list(paternal, maternal), ncells / 2)))
+#' vars = 1:nrow(gt)
+#' colnames(gt) = 1:ncells
+#' rownames(gt) = vars
+#'
+#' ##create a feature annotation data-frame
+#' nvars = nrow(gt)
+#' featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars),
+#' as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4,
+#' dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors =
+#' FALSE)
+#'
+#' ##create acset
+#' acset = new_acset(featdata, gt = gt)
+#' 
+#' @export
 new_acset <- function(featdata, refcount = NA, altcount = NA, phenodata = NA, gt = NA){
 
     ##Error-checks
@@ -705,22 +838,73 @@ new_acset <- function(featdata, refcount = NA, altcount = NA, phenodata = NA, gt
         if(is.null(colnames(altcount))){
             stop('colnames of altcount is null')
         }
-        if(!(rownames(featdata) == rownames(altcount) && rownames(featdata) == rownames(refcount))){
+        if(!(identical(rownames(featdata), rownames(altcount)) && identical(rownames(featdata), rownames(refcount)))){
             stop('rownames of featdata and refcount and altcount need to be identical')
         }
-        if(!(rownames(phenodata) == colnames(altcount) && rownames(phenodata) == colnames(refcount))){
-            stop('rownames of phenodata need to identical to the colnames of refcount and altcount')
+        if(!(identical(rownames(phenodata), colnames(altcount)) && identical(rownames(phenodata), colnames(refcount)))){
+            stop('rownames of phenodata need to be identical to the colnames of refcount and altcount')
         }
     }
     if(!is.logical(gt)){
         if(length(setdiff(gt, c(NA, 0, 1, 2)))){
             stop('gt contains values that are not in the allowed set {0, 1, 2, NA}')
         }
+        if(!(is.matrix(gt))){
+            stop('gt need to be a matrix')
+        }
+        if(is.null(rownames(gt))){
+            stop('rownames of gt is null')
+        }
+        if(is.null(colnames(gt))){
+            stop('colnames of gt is null')
+        }
+        if(!(identical(rownames(featdata), rownames(gt)))){
+            stop('rownames of featdata and gt need to be identical')
+        }
+        if(!(identical(rownames(phenodata), colnames(gt)))){
+            stop('rownames of phenodata need to be identical to the colnames of gt')
+        }        
     }
     
     return(acset)
 }
 
+#' Subset variants
+#'
+#' \code{subset_rows} subsets the variants of an acset
+#'
+#' @param acset An acset list created by the \code{\link{new_acset}} function.
+#' @param sel.ind A vector with either integer row indices or a character
+#' vector to subset the rownames.
+#' 
+#' @return acset An acset list where every element containing variant-related
+#' information has been subsetted
+#'
+#' @examples
+#' ##create a small artificial genotype matrix
+#' ncells = 10
+#' paternal = c(0, 2, 0, 0, 2)
+#' maternal = c(2, 0, 2, 2, 0)
+#' gt = as.matrix(as.data.frame(rep(list(paternal, maternal), ncells / 2)))
+#' vars = 1:nrow(gt)
+#' colnames(gt) = 1:ncells
+#' rownames(gt) = vars
+#'
+#' ##create a feature annotation data-frame
+#' nvars = nrow(gt)
+#' featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars),
+#' as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4,
+#' dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors =
+#' FALSE)
+#'
+#' ##create acset
+#' acset = new_acset(featdata, gt = gt)
+#'
+#' ##subset variants
+#' sel_ind = c(1, 3)
+#' acset = subset_rows(acset, sel_ind)
+#' 
+#' @export
 subset_rows <- function(acset, sel.ind){
 
     ##data structures with features as rows
@@ -765,6 +949,42 @@ subset_rows <- function(acset, sel.ind){
     return(acset)
 }
 
+#' Subset cells
+#'
+#' \code{subset_cols} subsets the cells of an acset
+#'
+#' @param acset An acset list created by the \code{\link{new_acset}} function.
+#' @param sel.ind A vector with either integer column indices or a character
+#' vector to subset the colnames.
+#' 
+#' @return acset An acset list where every element containing cell-related
+#' information has been subsetted
+#'
+#' @examples
+#' ##create a small artificial genotype matrix
+#' ncells = 10
+#' paternal = c(0, 2, 0, 0, 2)
+#' maternal = c(2, 0, 2, 2, 0)
+#' gt = as.matrix(as.data.frame(rep(list(paternal, maternal), ncells / 2)))
+#' vars = 1:nrow(gt)
+#' colnames(gt) = 1:ncells
+#' rownames(gt) = vars
+#'
+#' ##create a feature annotation data-frame
+#' nvars = nrow(gt)
+#' featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars),
+#' as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4,
+#' dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors =
+#' FALSE)
+#'
+#' ##create acset
+#' acset = new_acset(featdata, gt = gt)
+#'
+#' ##subset variants
+#' sel_ind = c(1, 3)
+#' acset = subset_cols(acset, sel_ind)
+#' 
+#' @export
 subset_cols <- function(acset, sel.ind){
 
     ##data structures with features as rows
@@ -797,12 +1017,34 @@ subset_cols <- function(acset, sel.ind){
     return(acset)
 }
 
-subset_feat <- function(acset, pass_feat){
+#' Subset features
+#'
+#' \code{subset_feat} subsets the features of an acset
+#'
+#' @param acset An acset list created by the \code{\link{new_acset}} function.
+#' @param feat A character vector with features to subset.
+#' 
+#' @return acset An acset list where every element containing feature-related
+#' information has been subsetted
+#'
+#' @examples
+#' ##load dataset
+#' invisible(marinov)
+#' acset = new_acset(featdata = marinov[['featdata']], refcount =
+#' marinov[['refcount']], altcount = marinov[['altcount']], phenodata =
+#' marinov[['phenodata']])
+#'
+#' ##subset features
+#' sel_feat = c('HMGB1', 'ITGA4')
+#' acset_filt = subset_feat(acset, sel_feat)
+#' 
+#' @export
+subset_feat <- function(acset, feat){
 
     featdata = acset[['featdata']]
     
     ##subset featdata on passed feats to get passed variants
-    featdata = merge(featdata, as.matrix(pass_feat), by.x = 'feat', by.y = 1, stringsAsFactors = FALSE)
+    featdata = merge(featdata, as.matrix(feat), by.x = 'feat', by.y = 1, stringsAsFactors = FALSE)
     rownames(featdata) = featdata[, 'var']
 
     ##subset on passed vars
@@ -812,6 +1054,55 @@ subset_feat <- function(acset, pass_feat){
     return(acset)
 }
 
+#' Filter variants and features
+#'
+#' \code{filter_acset} removes variants and features with too little data
+#'
+#' The function removes variants which have less than "nmincells" cells with
+#' imbalanced allelic expression. A cell is deemed to have imbalanced allelic
+#' expression if its transcribed genotype is set to 0 or 2, see
+#' \code{\link{call_gt}}. Subsequently it removes features with less than
+#' "nminvar" variants, see \code{\link{filter_feat_nminvar}}.
+#'
+#' @param acset An acset list created by \code{\link{new_acset}}. It must contain
+#' a "gt" element with transcribed genotype calls, see \code{\link{call_gt}}.
+#' @param nmincells An integer specifying the minimum number of cells with
+#' imbalanced allelic expression.
+#' @param nminvar An integer specifying the minimum number of variants within a
+#' feature.
+#' @param feat_filter Boolean specifying if filtering should be done per feature
+#' including an initial cell-filter removing cells with less than two variants
+#' with imbalanced expression within the feature.
+#' 
+#' @return acset An acset list.
+#'
+#' @examples
+#' ##create a small artificial genotype matrix
+#' ncells = 10
+#' paternal = c(0, 2, 0, 0, 2)
+#' maternal = c(2, 0, 2, 2, 0)
+#' gt = as.matrix(as.data.frame(rep(list(paternal, maternal), ncells / 2)))
+#' vars = 1:nrow(gt)
+#' colnames(gt) = 1:ncells
+#' rownames(gt) = vars
+#'
+#' ##create a feature annotation data-frame
+#' nvars = nrow(gt)
+#' featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars),
+#' as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4,
+#' dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors =
+#' FALSE)
+#'
+#' ##create acset
+#' acset = new_acset(featdata, gt = gt)
+#'
+#' ##Remove variants with imbalanced expression in less than nmincells cells and
+#' ##features with less than nminvar variants
+#' nmincells = 5
+#' nminvar = 2
+#' acset_filt = filter_acset(acset, nmincells, nminvar)
+#' 
+#' @export
 filter_acset <- function(acset, nmincells, nminvar = 2, feat_filter = FALSE){
 
     if(feat_filter){
@@ -921,6 +1212,46 @@ filter_singlefeat_gt <- function(gt, ncells = 3){
     return(pass_feat)
 }
 
+#' Filter features on minimal number of required variants
+#'
+#' \code{filter_feat_nminvar} removes features with less than "nmin_var"
+#' variants.
+#'
+#' The function takes an acset and an integer, "nmin_var", as input and filter
+#' out features that have less than "nmin_var" variants.
+#'
+#' @param acset An acset list created by the function \code{\link{new_acset}}.
+#' @param nmin_var An integer specifying the minimum number of variants within
+#' a feature
+#' 
+#' @return acset An acset list. The element [['filter']][['nmin_var']] is added
+#' or updated to the acset to record the filter argument used.
+#'
+#' @examples
+#' ##create a small artificial genotype matrix
+#' ncells = 10
+#' paternal = c(0, 2, 0, 0, 2)
+#' maternal = c(2, 0, 2, 2, 0)
+#' gt = as.matrix(as.data.frame(rep(list(paternal, maternal), ncells / 2)))
+#' vars = 1:nrow(gt)
+#' colnames(gt) = 1:ncells
+#' rownames(gt) = vars
+#'
+#' ##create a feature annotation data-frame
+#' nvars = nrow(gt)
+#' featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars),
+#' as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4,
+#' dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors =
+#' FALSE)
+#'
+#' ##create acset
+#' acset = new_acset(featdata, gt = gt)
+#'
+#' ##Remove features with less than nminvar variants
+#' nminvar = 2
+#' acset = filter_feat_nminvar(acset, nminvar)
+#' 
+#' @export
 filter_feat_nminvar <- function(acset, nmin_var = 2){
 ###Filter on minimum number of variants present in feature
     
@@ -939,18 +1270,61 @@ filter_feat_nminvar <- function(acset, nmin_var = 2){
     return(acset)
 }
 
-filter_var_gt <- function(acset, ncells = 3){
+#' Filter variants
+#'
+#' \code{filter_var_gt} removes variants based on the number of cells with
+#' imbalanced expression
+#'
+#' The function removes variants which have less than "nmincells" cells with
+#' imbalanced allelic expression. A cell is deemed to have imbalanced allelic
+#' expression if its transcribed genotype is set to 0 or 2, see
+#' \code{\link{call_gt}}.
+#'
+#' @param acset An acset list created by \code{\link{new_acset}}. It must
+#' contain a "gt" element with transcribed genotype calls, see
+#' \code{\link{call_gt}}.
+#' @param nmincells An integer specifying the minimum number of cells with
+#' imbalanced allelic expression.
+#' 
+#' @return acset An acset list subsetted on variants that pass the filter.
+#'
+#' @examples
+#' ##create a small artificial genotype matrix
+#' ncells = 10
+#' paternal = c(0, 2, 0, 0, 2)
+#' maternal = c(2, 0, 2, 2, 0)
+#' gt = as.matrix(as.data.frame(rep(list(paternal, maternal), ncells / 2)))
+#' vars = 1:nrow(gt)
+#' colnames(gt) = 1:ncells
+#' rownames(gt) = vars
+#'
+#' ##create a feature annotation data-frame
+#' nvars = nrow(gt)
+#' featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars),
+#' as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4,
+#' dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors =
+#' FALSE)
+#'
+#' ##create acset
+#' acset = new_acset(featdata, gt = gt)
+#'
+#' ##Remove variants with imbalanced expression in less than 3 cells
+#' nmincells = 3
+#' acset_filt = filter_var_gt(acset, nmincells)
+#' 
+#' @export
+filter_var_gt <- function(acset, nmincells = 3){
     
     gt = acset$gt
     featdata = acset$featdata
 
     ##loop feats
     feat2vars = tapply(featdata[, 'var'], featdata[, 'feat'], unique)
-    var_pass = unlist(lapply(feat2vars, function(jvars, gt, ncells){
+    var_pass = unlist(lapply(feat2vars, function(jvars, gt, nmincells){
         gt = gt[jvars, , drop = FALSE]
-        pass_var = filter_var_singlefeat_gt(gt, ncells)
+        pass_var = filter_var_singlefeat_gt(gt, nmincells)
         return(pass_var)
-    }, gt, ncells))
+    }, gt, nmincells))
     
     acset = subset_rows(acset, var_pass)
 
@@ -987,29 +1361,110 @@ filter_var_mincount <- function(acset, mincount = 3, ncells = 1){
     return(acset)
 }
 
-filter_homovars <- function(j.acset, alpha = 0.1, mono.ase = 0.5){
+#' Filter homozygous variants
+#'
+#' \code{filter_homovars} removes variants for which a large proportion of cells
+#' with imbalanced expression is imbalanced towards the same allele
+#'
+#' The function removes variants which tend to express the same allele in a
+#' large proportion of cells, that is, the allelic expression is stable across
+#' cells rather than random with respect to which allele is the most highly
+#' expressed. The purpose of this filter is to reduce the number of variants
+#' that have falsely been called as heterozygous variants but are actually
+#' homozygous. Use with caution as a heterozygous variants can indeed have
+#' imbalanced expression towards the same allele in the majority of cells.
+#' A cell is deemed to have imbalanced allelic expression if its allele-specific
+#' expression, ase, is < mono_ase or >(1 - mono_ase), where ase = alternative
+#' allele count / (alternative allele count + reference allele count). If the
+#' number of cells expressing one allele in such an imbalanced manner is
+#' significantly greater than the number of cells expressing the other allele
+#' the variant is removed (binomial test).
+#'
+#' @param acset An acset list which must contain "refcount" and "altcount"
+#' elements with allele counts, see \code{\link{new_acset}}.
+#' @param alpha A numeric specifying the significance level of the binomial
+#' test, where the test compares the number of cells expressing each allele
+#' in an imbalanced "monoallelic" manner.
+#' @param mono_ase A numeric between 0 and 1 specifying the allele specific
+#' expression level at which to deem an allele monoallelically expressed.
+#' 
+#' @return acset An acset list subsetted on variants that pass the filter.
+#'
+#' @examples
+#' ##load dataset
+#' invisible(marinov)
+#' acset = new_acset(featdata = marinov[['featdata']], refcount =
+#' marinov[['refcount']], altcount = marinov[['altcount']], phenodata =
+#' marinov[['phenodata']])
+#'
+#' ##Remove variants having monoallelic expression of the same allele in a
+#' ##large proportion of cells
+#' alpha = 0.1
+#' mono_ase = 0.1
+#' acset_filt = filter_homovars(acset, alpha, mono_ase)
+#' 
+#' @export
+filter_homovars <- function(acset, alpha = 0.1, mono_ase = 0.1){
 
     ##Number of cells with ase towards each of the alleles
-    ase = j.acset[['altcount']] / (j.acset[['refcount']] + j.acset[['altcount']])
-    n.refcells = apply(ase, 1, function(j.ase){length(which(j.ase < mono.ase))})
-    n.altcells = apply(ase, 1, function(j.ase){length(which(j.ase > (1 - mono.ase)))})
+    ase = acset[['altcount']] / (acset[['refcount']] + acset[['altcount']])
+    n.refcells = apply(ase, 1, function(j.ase){length(which(j.ase < mono_ase))})
+    n.altcells = apply(ase, 1, function(j.ase){length(which(j.ase > (1 - mono_ase)))})
     n.allele2cells = cbind(n.refcells, n.altcells, n.refcells + n.altcells)
     colnames(n.allele2cells) = c('ref', 'alt', 'sum')
 
-    bi.rs = rownames(n.allele2cells)[which(n.allele2cells[, 'sum'] == 0)]    
+    bi.rs = rownames(n.allele2cells)[which(n.allele2cells[, 'sum'] == 0)]
     n.allele2cells = n.allele2cells[setdiff(rownames(n.allele2cells), bi.rs), ]
     
-    ##get binom pval    
+    ##get binom pval
     pvals = apply(n.allele2cells, 1, function(j.c){pvals = binom.test(j.c['alt'], j.c['sum'], p = 0.5, alternative = 'two.sided')$p.value})
     pass.rs = names(pvals)[which(pvals >= alpha)]
     pass.rs = c(pass.rs, bi.rs)
     
     ##filter
-    j.acset = subset_rows(j.acset, pass.rs);
+    acset = subset_rows(acset, pass.rs);
     
-    return(j.acset)
-}    
+    return(acset)
+}
 
+#' Filter variants with zero allele counts in all cells
+#'
+#' \code{filter_zerorow} removes variants which do no have any read count
+#'
+#' @param acset An acset list which must contain "refcount" and "altcount"
+#' elements with allele counts, see \code{\link{new_acset}}.
+#' 
+#' @return acset An acset list subsetted on variants that pass the filter.
+#'
+#' @examples
+#' ##create small artifical allele count matrixes where first row is zero
+#' ncells = 10
+#' ref = c(0, 10, 1, 5, 2, 9)
+#' alt = c(0, 2, 5, 5, 6, 3)        
+#' refcount = as.matrix(as.data.frame(rep(list(ref, alt), ncells / 2)))
+#' altcount = as.matrix(as.data.frame(rep(list(alt, ref), ncells / 2)))
+#' 
+#' vars = 1:nrow(refcount)
+#' samples = 1:ncells
+#' colnames(refcount) = samples
+#' rownames(refcount) = vars
+#' colnames(altcount) = samples
+#' rownames(altcount) = vars
+#'
+#' ##create a feature annotation data-frame
+#' nvars = length(vars)
+#' featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars),
+#' as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4,
+#' dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors =
+#' FALSE)
+#'
+#' ##create acset
+#' acset = new_acset(featdata, altcount = altcount, refcount = refcount)
+#'
+#' ##Remove variants having no allele counts
+#' acset_filt = filter_zerorow(acset)
+#' 
+#' @export
 filter_zerorow <- function(acset){
 
     totcount = acset[['altcount']] + acset[['refcount']]
@@ -1020,6 +1475,51 @@ filter_zerorow <- function(acset){
     return(acset)
 }
 
+#' Call transcribed genotypes
+#'
+#' \code{call_gt} calls transcribed genotypes using allele RNA-seq read counts
+#'
+#' This is a simplistic transcribed genotype caller which is used to discretize
+#' which allele is the most expressed. For each variant and cell one of four
+#' possible discrete values is set depending on the expression of the two
+#' alleles. 0: reference allele most highly expressed, 1: bi-allelic expression
+#' with similar degree of expression from the two alleles, 2: alternative allele
+#' most highly expressed, or, NA if there are not enough reads to make a call.
+#'
+#' @param acset An acset list created by the function \code{\link{new_acset}}.
+#' The acset must contain a refcount and altcount matrix with allele counts.
+#' @param min_acount An integer specifying the minimum number of reads required
+#' to be present for at least one of the two alleles as to make a call. If not
+#' fulfilled the call is set to NA.
+#' @param fc An integer specifying the fold-change cutoff between the expression
+#' of the alternative and reference allele (fc.observed = alternative allele
+#' count / reference allele count). The transcribed genotype call is set to 0 if
+#' fc.observed <= fc, 2 if fc.observed >= fc and 1 otherwise (if there are
+#' enough reads present, see the "min_acount" parameter).
+#' 
+#' @return acset An acset list where the "gt" element is set or updated. "gt" is
+#' a matrix with integer values representing transcribed genotype calls. 0:
+#' reference allele most highly expressed, 1: bi-allelic expression with similar
+#' degree of expression from the two alleles, 2: alternative allele most highly
+#' expressed. NA's are used to represent entries where no call could be made.
+#' The rownames are set to the variant column, "var", of featdata. The colnames
+#' are set to the colnames of "refcount". The elements
+#' [['args']][['filter']][c('min_acount', 'fc')] are added or updated to the
+#' acset as to record the filter arguments used.
+#'
+#' @examples
+#' ##load dataset
+#' invisible(marinov)
+#' acset = new_acset(featdata = marinov[['featdata']], refcount =
+#' marinov[['refcount']], altcount = marinov[['altcount']], phenodata =
+#' marinov[['phenodata']])
+#'
+#' ##Call transcribed genotypes
+#' min_acount = 3
+#' fc = 3
+#' acset = call_gt(acset, min_acount, fc)
+#' 
+#' @export
 call_gt <- function(acset, min_acount = 3, fc = 3){
 ###Simplistic genotype caller. Genotype callers often rely on DNA-specific assumptions.
 

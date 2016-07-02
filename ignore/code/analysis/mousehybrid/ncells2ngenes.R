@@ -40,7 +40,7 @@ snp.annot.rds = file.path(cloud.dir, 'projects/scphaser/nogit/data/mousehybrid',
 
 ##OUT
 filt_acset_rds = file.path(out_rds_dir, 'acset_filt.rds')
-ncells2ngenes_rds = file.path(out_rds_dir, 'ncells2ngenes.rds')
+ncells2ngenes_rds = file.path(out_rds_dir, 'ncells2ngenes.replace_no.rds')
 
 ##Libs
 source('./ignore/code/analysis/performance.R')
@@ -55,7 +55,11 @@ main <- function(){
     load('../nogit/data/mousehybrid/mousehybrid.rda')
 
     ##create acset
-    acset = new_acset(mousehybrid$featdata, mousehybrid$refcount, mousehybrid$altcount, mousehybrid$phenodata)
+    featdata = mousehybrid$featdata
+    ref = featdata[, 'c57']
+    alt = featdata[, 'cast']
+    featdata = cbind(featdata, ref, alt, stringsAsFactors = FALSE)
+    acset = new_acset(featdata, mousehybrid$refcount, mousehybrid$altcount, mousehybrid$phenodata)
     lapply(acset, dim) #167,443 x 336
     length(unique(acset[['featdata']][, 'feat'])) #11,590
     feat2nvars = table(acset[['featdata']][, 'feat'])
@@ -121,7 +125,13 @@ main <- function(){
     ##get number of variants
     nvars = unlist(lapply(acset_list, function(j.acset){nrow(j.acset[['featdata']])}))
     ncells2ngenes = cbind(ncells2ngenes, nvars)
-    
+
+    ##get fraction of genes
+    n.bg.genes = 20268 ##see log.sh
+    frac.genes = ncells2ngenes[, 'ngenes'] / n.bg.genes
+    ncells2ngenes = cbind(ncells2ngenes, frac.genes)
+    ##8450 / 20268 = 41.7%
+
     ##Dump
     saveRDS(ncells2ngenes, file = ncells2ngenes_rds)
 
@@ -148,12 +158,34 @@ main <- function(){
     gg = gg + xlab('Number of sequenced cells')
     gg = gg + ylab('Number of phasable genes')
 
-    j.pdf = file.path(out_pdf_dir, 'ncells2ngenes.resampled.pdf')
+    j.pdf = file.path(out_pdf_dir, 'ncells2ngenes.replace_no.pdf')
     dir.create(dirname(j.pdf), recursive = TRUE)
     pdf(j.pdf)
     plot(gg)
     dev.off()
+
+    gg = ggplot(ncells2ngenes, aes_string(x = 'ncells', y = 'frac.genes'))
+    gg = gg + geom_line(stat = 'summary', fun.y = 'mean')
+    gg = gg + geom_errorbar(stat = 'summary', fun.data = mean_se) #width = errbar.w
+
+    ##tick breaks
+    ##gg = gg + coord_cartesian(ylim = c(800, 3050))
+    ##gg = gg + scale_y_continuous(breaks = seq(1000, 3000, 500))
+    gg = gg + scale_x_continuous(breaks = c(seq(50, 336, 50), 336))
     
+    ##Background
+    gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
+    gg = gg + theme(axis.text = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
+    gg = gg + xlab('Number of sequenced cells')
+    gg = gg + ylab('Number of phasable genes')
+    gg = gg + theme(axis.line.x = element_line(color="black", size = 0.5), axis.line.y = element_line(color="black", size = 0.5))
+    
+    j.pdf = file.path(out_pdf_dir, 'ncells2fracgenes.replace_no.pdf')
+    dir.create(dirname(j.pdf), recursive = TRUE)
+    pdf(j.pdf)
+    plot(gg)
+    dev.off()
+
 }
 
 filter_acset_par <- function(j.param, paramset, acset, nmincells = 5, nminvar = 2){
@@ -163,7 +195,7 @@ filter_acset_par <- function(j.param, paramset, acset, nmincells = 5, nminvar = 
     ##subset cells
     phenodata = acset[['phenodata']]
     samples = phenodata[, 'sample']
-    j_samples = sample(samples, j_ncells, replace = TRUE)
+    j_samples = sample(samples, j_ncells, replace = FALSE)
     acset_filt = subset_cols(acset, j_samples)
 
     ##filter vars and genes

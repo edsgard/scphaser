@@ -140,6 +140,48 @@ get_phase_pval <- function(acset, nperm = 100, fixedrowmargin = FALSE){
     return(pval)
 }
 
+#' Randomize an acset
+#'
+#' \code{racset} randomizes the entries in the allele count matrixes or the
+#' genotype matrix
+#'
+#' The function scrambles all entries within each allele count matrix or within
+#' the genotype matrix.
+#'
+#' @param acset An acset list created by \code{\link{new_acset}}.
+#' @param type A character string with two allowed values. 'ac' specifies that
+#' the allele count matrixes should be randomized and 'gt' specifies that the
+#' genotype matrix should be randomized.
+#' @param fixedrowmargin Boolean specifying if the row-sums should be kept
+#' unchanged.
+#' 
+#' @return acset A randomized acset list.
+#'
+#' @examples
+#' ##create a small artificial genotype matrix
+#' ncells = 10
+#' paternal = c(0, 2, 0, 0, 2)
+#' maternal = c(2, 0, 2, 2, 0)
+#' gt = as.matrix(as.data.frame(rep(list(paternal, maternal), ncells / 2)))
+#' vars = 1:nrow(gt)
+#' colnames(gt) = 1:ncells
+#' rownames(gt) = vars
+#'
+#' ##create a feature annotation data-frame
+#' nvars = nrow(gt)
+#' featdata = as.data.frame(matrix(cbind(rep('jfeat', nvars),
+#' as.character(1:nvars), rep('dummy', nvars), rep('dummy', nvars)), ncol = 4,
+#' dimnames = list(vars, c('feat', 'var', 'ref', 'alt'))), stringsAsFactors =
+#' FALSE)
+#'
+#' ##create acset
+#' acset = new_acset(featdata, gt = gt)
+#'
+#' ##Randomize the genotype matrix
+#' type = 'gt'
+#' acset_rand = racset(acset, type)
+#' 
+#' @export
 racset <- function(acset, type = 'ac', fixedrowmargin = FALSE){
 
     if(type == 'ac'){
@@ -210,8 +252,52 @@ gtperm <- function(gt){
     gt[perm.ind] = gt[perm.sampled.ind]
 
     return(gt)
-}        
+}
 
+#' Phasing concordance plot
+#'
+#' \code{plot_conc} plots the phasing concordance, see \code{\link{set_gt_conc}}
+#'
+#' To assess the success of the phasing one can calculate the degree of
+#' variability remaining if all cells with haplotype 2 are set to haplotype 1.
+#' As a rough measure of this this function calculates the variability as the
+#' number of cells that differ from the inferred haplotype for every gene with
+#' two variants. The differing number of cells per gene we denote as the
+#' inconcordance and the number of cells with identical haplotype to the
+#' inferred haplotype as concordance, see \code{\link{set_gt_conc}} for further
+#' details.
+#'
+#' @param acset An acset list created by \code{\link{new_acset}}. The acset must
+#' contain the elements 'gt_conc' and 'gt_phased_conc' which contain the
+#' concordance and inconcordance for every gene before (gt_conc) and after
+#' phasing (gt_phased_conc), see \code{\link{set_gt_conc}}.
+#' @param feats A character vector of feature names to include in the plot.
+#' @param cex A numerical value giving the amount by which plotting text and
+#' symbols should be magnified relative to the default, see \code{\link{par}}.
+#'
+#' @examples
+#' ##load dataset
+#' invisible(marinov)
+#' acset = new_acset(featdata = marinov[['featdata']], refcount =
+#' marinov[['refcount']], altcount = marinov[['altcount']], phenodata =
+#' marinov[['phenodata']])
+#'
+#' ##Call gt
+#' acset = call_gt(acset, min_acount = 3, fc = 3)
+#'
+#' ##Filter variants and genes
+#' acset = filter_acset(acset, nmincells = 5, nminvar = 2)
+#'
+#' ##Phase
+#' acset = phase(acset, input = 'gt', weigh = FALSE, method = 'exhaust')
+#'
+#' ##Calculate the genotype concordance before and after phasing
+#' acset = set_gt_conc(acset)
+#' 
+#' ##Plot the genotype concordance before and after phasing
+#' acset = plot_conc(acset)
+#' 
+#' @export
 plot_conc <- function(acset, feats = NA, cex = 0.5){
 
     ##concordance before and after phasing
@@ -251,6 +337,54 @@ plot_conc <- function(acset, feats = NA, cex = 0.5){
     
 }
 
+#' Cell-distribution variability upon phasing
+#'
+#' \code{set_gt_conc} calculates an approximate measure of the spread of the
+#' cells in the allele-specific expression variant-space per gene
+#'
+#' To assess the success of the phasing one can calculate the degree of
+#' variability remaining if all cells with haplotype 2 are set to haplotype 1.
+#' As a rough measure of this this function calculates the variability as the
+#' number of cells that differ from the inferred haplotype for every gene with
+#' two variants. The differing number of cells per gene we denote as the
+#' inconcordance and the number of cells with identical haplotype to the
+#' inferred haplotype as concordance. This can be understood by viewing each
+#' cell as a point in a transcribed genotype variant space, where each dimension
+#' is a variant (within a gene), with values in the transcribed genotype domain.
+#' The expression of the alleles within a gene from a single cell will then tend
+#' to cluster towards the haplotype state, and the remaining variability of the
+#' cells in that space after phasing can be used to measure how well the cells
+#' conform to the haplotype.
+#'
+#' @param acset An acset list created by \code{\link{new_acset}}. The acset must
+#' contain an element 'gt', see \code{\link{call_gt}} and an element
+#' 'gt_phased', see function \code{\link{phase}}.
+#' 
+#' @return acset An acset list where two elements have been added or updated,
+#' 'gt_conc' and 'gt_phased_conc'. The elements contain the concordance and
+#' inconcordance for every gene before (gt_conc) and after phasing
+#' (gt_phased_conc).
+#'
+#' @examples
+#' ##load dataset
+#' invisible(marinov)
+#' acset = new_acset(featdata = marinov[['featdata']], refcount =
+#' marinov[['refcount']], altcount = marinov[['altcount']], phenodata =
+#' marinov[['phenodata']])
+#'
+#' ##Call gt
+#' acset = call_gt(acset, min_acount = 3, fc = 3)
+#'
+#' ##Filter variants and genes
+#' acset = filter_acset(acset, nmincells = 5, nminvar = 2)
+#'
+#' ##Phase
+#' acset = phase(acset, input = 'gt', weigh = FALSE, method = 'exhaust')
+#'
+#' ##Get genotype concordance before and after phasing
+#' acset = set_gt_conc(acset)
+#' 
+#' @export
 set_gt_conc <- function(acset){
 
     featdata = acset[['featdata']]

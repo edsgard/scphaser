@@ -5,12 +5,12 @@
 ###SYNOPSIS
 ###library('devtools')
 ###devtools::load_all()
-###source("ignore/code/analysis/borel/ncells2ngenes.R")
+###source("ignore/code/analysis/mousehybrid/ncells2ngenes.downsample_vars.R")
 
 
 ##Params
-sys = 'dna'
 sys = 'rs13'
+sys = 'dna'
 
 
 ##*###
@@ -23,12 +23,11 @@ if(sys == 'dna'){
 if(sys == 'rs13'){
     cloud.dir = '/Volumes/Data/cloud/btsync/work/rspd'
 }
-
-data.dir = file.path(cloud.dir, 'projects/scphaser/nogit/data/borel')
+ac.dir = file.path(cloud.dir, 'projects/scphaser/nogit/data/mousehybrid/all_snps/downsampled')
 
 ##OUT
-out_rds_dir = '../nogit/data/borel'
-out_pdf_dir = './ignore/res/borel/pdf'
+out_rds_dir = '../nogit/data/mousehybrid/all_snps/downsampled'
+out_pdf_dir = './ignore/res/mousehybrid/all_snps/downsampled/perf/pdf'
 
 
 ##*###
@@ -36,11 +35,12 @@ out_pdf_dir = './ignore/res/borel/pdf'
 ##*###
 
 ##IN
-ref.counts.rds = file.path(data.dir, paste('ref', '.counts.rds', sep = ''))
-alt.counts.rds = file.path(data.dir, paste('alt', '.counts.rds', sep = ''))
-snp.annot.rds = file.path(data.dir, 'snp.annot.rds')
+ref.counts.rds = file.path(ac.dir, paste('c57', '.counts.rds', sep = ''))
+alt.counts.rds = file.path(ac.dir, paste('cast', '.counts.rds', sep = ''))
+snp.annot.rds = file.path(ac.dir, 'snp.annot.rds')
 
 ##OUT
+filt_acset_rds = file.path(out_rds_dir, 'acset_filt.rds')
 ncells2ngenes_rds = file.path(out_rds_dir, 'ncells2ngenes.replace_no.rds')
 
 ##Libs
@@ -51,23 +51,25 @@ library('tidyr')
 
 main <- function(){
 
-    ##*###
-    ##Read and prep data
-    ##*###
+
+    ##Read data
     altcount = readRDS(alt.counts.rds)
     refcount = readRDS(ref.counts.rds)
     featdata = readRDS(snp.annot.rds)
-    
+
     ##create acset
     acset = new_acset(featdata, refcount, altcount)
-    lapply(acset, dim) #    163
-    length(unique(acset[['featdata']][, 'feat'])) #13,698
+    nrow(featdata) #314,036
+
+    ##create acset
+    lapply(acset, dim) #314,036 x 336
+    length(unique(acset[['featdata']][, 'feat'])) #17,271
     feat2nvars = table(acset[['featdata']][, 'feat'])
-    table(feat2nvars) #16: 159
+    table(feat2nvars) #
 
     ##Filter vars with 0 counts
     acset = filter_zerorow(acset)
-    lapply(acset, dim) #230,674    163
+    lapply(acset, dim) #313,255
     
     ##Call gt
     min_acount = 3
@@ -80,42 +82,44 @@ main <- function(){
     if(!(mono.ase == 0)){
         acset = filter_homovars(acset, alpha = alpha, mono.ase = mono.ase)
     }
-    lapply(acset, dim) #220,793    163
+    lapply(acset, dim) #289,481 x 336
 
     ##Filter variants on n.cells monoallelic and feats with < 2 j.vars
     nmincells = 5
-    nminvar = 2
+    nminvar = 2    
+    acset = filter_acset(acset, nmincells, nminvar)
+    lapply(acset, dim) #8,870 x 336
+    length(unique(acset[['featdata']][, 'feat'])) #2,479
 
-    acset = filter_var_gt(acset, nmincells)
-    lapply(acset, dim) #27,707; 163
-    j.acset = filter_feat_nminvar(acset, nminvar)
-    lapply(j.acset, dim) #27,410; 163
-    length(unique(acset[['featdata']][, 'feat']))
-    ##3,155
-
+    ##Dump
+    dir.create(dirname(filt_acset_rds), recursive = TRUE)
+    saveRDS(acset, file = filt_acset_rds)
+    
     
     ##*###
     ##Randomly sample n cells
     ##*###
+    acset = readRDS(filt_acset_rds)    
+    
     ##permutation iterations
     npermiter = 10 #10
     perm_iter = 1:npermiter
 
     ##number of cells
-    ncells = c(seq(25, 163, 25), 163)    
+    ncells = sort(c(seq(25, 336, 25), 163, 336))
     
     ##specify paramset as all possible combinations of the params
     paramset = expand.grid(perm_iter, ncells, stringsAsFactors = FALSE)
     colnames(paramset) = c('perm_iter', 'ncells')
     
     ##parallelization
-    ncores = 70
+    ncores = 80
     bp_param = BiocParallel::MulticoreParam(workers = ncores)
 
     ##Filter vars and feats
     nparamset = nrow(paramset)
     acset_list = BiocParallel::bplapply(1:nparamset, filter_acset_par, BPPARAM = bp_param, paramset = paramset, acset = acset)
-    ##status: fin (15.46 -> 15.47, 70 cores)
+    ##status: sub (15.24 -> 15.25, 80 cores)
 
     ##get number of genes
     ngenes = unlist(lapply(acset_list, function(j.acset){length(unique(j.acset[['featdata']][, 'feat']))}))
@@ -126,14 +130,18 @@ main <- function(){
     ncells2ngenes = cbind(ncells2ngenes, nvars)
 
     ##get fraction of genes
-    n.bg.genes = 15556 ##see ngenes.R
+    n.bg.genes = 20268 ##see log.sh
     frac.genes = ncells2ngenes[, 'ngenes'] / n.bg.genes
-    ##3044 / 15556 = 19.6%
     ncells2ngenes = cbind(ncells2ngenes, frac.genes)
 
     ##Dump
     saveRDS(ncells2ngenes, file = ncells2ngenes_rds)
+    ##status: fin
 
+    ncells2ngenes[which(ncells2ngenes[, 'ncells'] == 163), ]
+    summary(ncells2ngenes[which(ncells2ngenes[, 'ncells'] == 163), 'ngenes'])
+    ##median: 1,546
+    
     
     ##*###
     ##Plot
@@ -141,17 +149,15 @@ main <- function(){
     ncells2ngenes = readRDS(ncells2ngenes_rds)
 
     library('ggplot2')
-
-    errbar.w = 3
     
     gg = ggplot(ncells2ngenes, aes_string(x = 'ncells', y = 'ngenes'))
     gg = gg + geom_line(stat = 'summary', fun.y = 'mean')
-    gg = gg + geom_errorbar(stat = 'summary', fun.data = mean_se, width = errbar.w)
+    gg = gg + geom_errorbar(stat = 'summary', fun.data = mean_se) #width = errbar.w
 
     ##tick breaks
     ##gg = gg + coord_cartesian(ylim = c(800, 3050))
-    gg = gg + scale_y_continuous(breaks = seq(1000, 3000, 500))
-    gg = gg + scale_x_continuous(breaks = c(seq(25, 150, 25), 163))
+    ##gg = gg + scale_y_continuous(breaks = seq(1000, 3000, 500))
+    gg = gg + scale_x_continuous(breaks = c(seq(50, 336, 50), 336))
     
     ##Background
     gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
@@ -166,23 +172,22 @@ main <- function(){
     dev.off()
 
     
-    errbar.w = 3
-    
     gg = ggplot(ncells2ngenes, aes_string(x = 'ncells', y = 'frac.genes'))
     gg = gg + geom_line(stat = 'summary', fun.y = 'mean')
-    gg = gg + geom_errorbar(stat = 'summary', fun.data = mean_se, width = errbar.w)
+    gg = gg + geom_errorbar(stat = 'summary', fun.data = mean_se) #width = errbar.w
 
     ##tick breaks
     ##gg = gg + coord_cartesian(ylim = c(800, 3050))
     ##gg = gg + scale_y_continuous(breaks = seq(1000, 3000, 500))
-    gg = gg + scale_x_continuous(breaks = c(seq(25, 150, 25), 163))
+    gg = gg + scale_x_continuous(breaks = c(seq(50, 336, 50), 336))
     
     ##Background
     gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
     gg = gg + theme(axis.text = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
     gg = gg + xlab('Number of sequenced cells')
     gg = gg + ylab('Number of phasable genes')
-
+    gg = gg + theme(axis.line.x = element_line(color="black", size = 0.5), axis.line.y = element_line(color="black", size = 0.5))
+    
     j.pdf = file.path(out_pdf_dir, 'ncells2fracgenes.replace_no.pdf')
     dir.create(dirname(j.pdf), recursive = TRUE)
     pdf(j.pdf)

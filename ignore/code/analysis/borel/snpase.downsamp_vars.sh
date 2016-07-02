@@ -16,7 +16,7 @@ species='hsa'
 projdir='/mnt/kauffman/sandberglab/pipeline3.0/rnaseq/'${species}'/'${exp}
 
 ##IN/OUT
-scriptdir=${projdir}'/scripts/'
+scriptdir=${projdir}'/scripts'
 
 ##IN
 bamdir=${projdir}/'rnaseq/star_hg19'
@@ -100,10 +100,15 @@ N='250000'
 N='500000'
 N='750000'
 projdir='/mnt/kauffman/sandberglab/pipeline3.0/rnaseq/hsa/borel_EGAS00001001009'
+scriptdir=${scriptdir}/'N'${N}
 vcfdir=${projdir}/dnaseq/vcf
 pos=${vcfdir}/UCF1014.bcf.vcf.snv.het.dp.gene.dbsnp.pos
 downsampdir=${vcfdir}'_N'${N}
 snpfile=${downsampdir}/UCF1014.bcf.vcf.snv.het.dp.gene.dbsnp.pos
+
+mkdir $scriptdir
+mkdir $downsampdir
+cd $scriptdir
 shuf -n $N ${pos} >${snpfile}
 
 
@@ -118,6 +123,9 @@ do
 done
 
 
+#Symlink bam-file lists
+ln -s ../chr*.bam.files .
+
 ######
 #mpileup per sample, per chr
 ######
@@ -126,32 +134,54 @@ done
 #https://github.com/samtools/samtools/wiki/FAQ:
 #Q. In the pileup output, the base quality is occasionally smaller than the read quality in BAM. Bug?
 #A. By default, samtools computes Base Alignment Quality (BAQ) for each base. The quality column in pileup gives the minimum between BAQ and the original base quality, which may be lower than the base quality if the base is likely to be affected by indels nearby. It is a feature.
-cat sel.chroms | while read chr
+cat real.chroms | while read chr
 do    
-    cat ${chr}.bam.files | xargs -I% echo 'samtools mpileup -O -Q 30 -l' ${snpdir}/${chr}.pos % '1>'%.pileup '2>'%.pileup.err >${chr}.pileup.cmds.sh
+    cat ${chr}.bam.files | xargs -I% echo 'samtools mpileup -O -Q 30 -l' ${downsampdir}/${chr}.pos % '1>'%.downsample_${N}.pileup '2>'%.downsample_${N}.pileup.err >${chr}.pileup.cmds.sh
 done
 #    cat ${chr}.bam.files | xargs -I% echo 'samtools mpileup -Q20 -q255 -d1000 -t DP,DPR,INFO/DPR,SP,DV,DP4 -uvf /mnt/crick/sandberglab/genomes/hg19_norandom.fa -l' ${snpdir}/${hap}.${chr}.pos % '| vcfutils.pl varFilter | vcf-sort | bcftools view -O b 1>' %.bcf '2>'%.pileup.err >${chr}.pileup.cmds.sh
-cat chr*.pileup.cmds.sh >pileup.cmds.sh 
-wc -l pileup.cmds.sh #4075 (OK: 25 * 163)
+cat chr*.pileup.cmds.sh >pileup.downsample_${N}.cmds.sh 
+wc -l pileup.downsample_${N}.cmds.sh #3912 (OK: 24 * 163)
 
-screen -S pileup
-cat pileup.cmds.sh | parallel -n 1 -P 80
+screen -S pileup.N_${N}
+N='250000'
+cat pileup.downsample_${N}.cmds.sh | parallel -n 1 -P 50
 #status: fin
 
 
 ###
 #pileup2allelecounts
 ###
+exp='borel_EGAS00001001009'
+species='hsa'
+projdir='/mnt/kauffman/sandberglab/pipeline3.0/rnaseq/'${species}'/'${exp}
+vcfbasedir=${projdir}'/rnaseq/ase'
+bamsubdir=${vcfbasedir}'/bam/chrsplit'
 srcdir='/mnt/kauffman/edsgard/cloud/btsync/work/rspd/projects/scphaser/nogit/code'
-find $bamsubdir -name '*.pileup' >pileup.files
-cat pileup.files | xargs -I% echo python3 ${srcdir}/pileup2ac.py % %.ac >pileup2ac.cmds.sh
+scriptdir=${projdir}'/scripts'
 
-screen -S pileup2ac
-cat pileup2ac.cmds.sh | parallel -n 1 -P 80
-#status: fin
+N=750000
 
-find $bamsubdir -name '*.ac' >ac.files
-cp -p ac.files /mnt/kauffman/edsgard/cloud/btsync/work/rspd/projects/scphaser/nogit/scripts/borel/.
+scriptdir=${scriptdir}/'N'${N}
+namestr='*.downsample_'${N}'.pileup'
+
+cd $scriptdir
+find $bamsubdir -name $namestr >pileup.downsample_${N}.files
+cat pileup.downsample_${N}.files | xargs -I% echo python3 ${srcdir}/pileup2ac.py % %.downsample_${N}.ac >pileup2ac.downsample_${N}.cmds.sh
+echo $N
+cat pileup2ac.downsample_${N}.cmds.sh | wc -l #3912
+cat pileup2ac.downsample_${N}.cmds.sh | head
+
+screen -S pileup2ac.downsample_${N}
+N=750000
+cat pileup2ac.downsample_${N}.cmds.sh | parallel -n 1 -P 30
+#status: fin (250k, 500k, 750k)
+
+N=500000
+namestr='*.downsample_'${N}'.ac'
+find $bamsubdir -name $namestr >ac.downsample_${N}.files
+wc -l ac.downsample_${N}.files
+head ac.downsample_${N}.files
+cp -p ac.downsample_${N}.files /mnt/kauffman/edsgard/cloud/btsync/work/rspd/projects/scphaser/nogit/scripts/borel/.
 
 
 ###

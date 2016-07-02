@@ -230,6 +230,14 @@ do
     awk -v jchr=${chr} '$1 == jchr' $pos >${vcfdir}/${chr}.pos
 done
 
+#Get number of genes with at least two variants
+awk -F'\t' -v OFS='\t' '{s=$2; sub(/\(.*/, "", s); print $0, s;}' hg19.snps.refseqgenes >hg19.snps.stripped.refseqgenes
+
+cut -f13 ${vcf}.vcf.snv.het.dp.gene.dbsnp | sort | uniq -c >gene2nvars
+wc -l gene2nvars #18,447
+cat gene2nvars | awk '$1 >1 {print $0;}' >gene2nvars.minvars_2
+wc -l gene2nvars.minvars_2 #15,597. Including introns
+
 
 ###########################
 #RNA-seq allele-counting
@@ -237,3 +245,67 @@ done
 #SEE snpase.sh
 
 
+##########
+#Mapstats
+##########
+
+projdir='/mnt/kauffman/sandberglab/pipeline3.0/rnaseq/hsa/borel_EGAS00001001009'
+scriptdir=${projdir}'/scripts'
+cd $scriptdir
+
+stardir=${projdir}/rnaseq/star_hg19
+resdir=${projdir}/rnaseq/meta
+
+mkdir $resdir
+
+cd $resdir
+make_summary_starlog.pl ${stardir} >mapstats.tab
+wc -l mapstats.tab #210
+head mapstats.tab
+##nreads are all reads stated in Log.final.out, so, including multi-mapping reads.
+
+cd '/Volumes/Data/cloud/btsync/work/rspd/projects/scphaser/nogit/data/borel'
+scp -p 130.237.142.53:/mnt/kauffman/sandberglab/pipeline3.0/rnaseq/hsa/borel_EGAS00001001009/rnaseq/meta/mapstats.tab .
+##See stats.R for seq-depth summary of uniquely mapping reads.
+
+
+#############
+#Rpkmforgenes
+#############
+
+###
+#rnaseq.py pipeline
+###
+exp='borel_EGAS00001001009'
+timestamp='20160627'
+
+execdir='/mnt/kauffman/sandberglab/pipeline3.0'
+conf=${HOME}'/cloud/btsync/work/rspd/data/annot/rpkmforgenes/rnaseq.kauffman.pipeline3.0.20150228.conf'
+logdir='/mnt/kauffman/sandberglab/pipeline3.0/rnaseq/hsa/'${exp}'/logs'
+projdir='/mnt/kauffman/sandberglab/pipeline3.0/rnaseq/hsa/'${exp}
+scriptdir=${projdir}'/scripts'
+p='80'
+ref='hg19'
+
+#write pipecmd
+cd $scriptdir
+echo cd $execdir >rpkmforgenes.sh
+echo python3 rnaseq.py -R -p $p -a $ref -e $exp -c $conf '>'${logdir}/rnaseqpipe.${timestamp}.out '2>' ${logdir}/rnaseqpipe.${timestamp}.err >>rpkmforgenes.sh
+
+#filenames not sample-names so write commands explicitly
+find -L ${projdir}/star_hg19 -name '*.bam' >bam.files
+cat bam.files | tr '\n' ' ' >bam.sp
+echo 'python /mnt/kauffman/sandberglab/pipeline3.0/scripts/rpkmforgenes.py -p' $p '-ulen -readcount -fulltranscript -mRNAnorm -rmnameoverlap -bothendceil -a /mnt/kauffman/sandberglab/pipeline3.0/additionaldata/rpkmforgenes/hg19refGene_eGFP.txt -bamu -i TMP -o /mnt/kauffman/sandberglab/pipeline3.0/rnaseq/hsa/borel_EGAS00001001009/rpkmforgenes_star_hg19/refseq/rpkm_refseq.txt 1>'${logdir}/rpkmforgenes.out 2>${logdir}/rpkmforgenes.err >rpkmforgenes.sh
+
+#mkdir
+mkdir /mnt/kauffman/sandberglab/pipeline3.0/rnaseq/hsa/borel_EGAS00001001009/rpkmforgenes_star_hg19/refseq
+
+#run
+screen -S ${exp}.rpkmforgenes
+sh rpkmforgenes.sh
+#status: fin
+
+#copy
+cd '/Volumes/Data/cloud/btsync/work/rspd/projects/scphaser/nogit/data/borel'
+scp -p 130.237.142.53:/mnt/kauffman/sandberglab/pipeline3.0/rnaseq/hsa/borel_EGAS00001001009/rpkmforgenes_star_hg19/refseq/rpkm_refseq.txt .
+#aligned reads to genes and expressed gene stats: SEE stats.R
