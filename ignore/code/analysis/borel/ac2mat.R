@@ -3,7 +3,7 @@
 
 ##Params
 sys = 'dna'
-
+n.downsamp.vars = 750000
 
 ##*###
 ##Dirs
@@ -16,8 +16,12 @@ if(sys == 'rs13'){
     cloud.dir = '/Volumes/Data/cloud/btsync/work/rspd'
 }
 
+##IN
 acfiles.dir = file.path(cloud.dir, 'projects/scphaser/nogit/scripts/borel')
 snpdir = '/mnt/kauffman/sandberglab/pipeline3.0/rnaseq/hsa/borel_EGAS00001001009/dnaseq/vcf'
+
+##OUT
+ac.dir = file.path(cloud.dir, sprintf('projects/scphaser/nogit/data/borel/downsampled_N%i', n.downsamp.vars))
 
 
 ##*###
@@ -26,12 +30,12 @@ snpdir = '/mnt/kauffman/sandberglab/pipeline3.0/rnaseq/hsa/borel_EGAS00001001009
 
 ##IN
 snp.meta.rds = file.path(snpdir, 'UCF1014.snv.het.dp.gene.dbsnp.rds')
-acfiles.txt = file.path(acfiles.dir, 'ac.files')
+acfiles.txt = file.path(acfiles.dir, sprintf('ac.downsample_%i.files', n.downsamp.vars))
 
 ##OUT
-ref.counts.rds = file.path(cloud.dir, 'projects/scphaser/nogit/data/borel', 'ref.counts.rds')
-alt.counts.rds = file.path(cloud.dir, 'projects/scphaser/nogit/data/borel', 'alt.counts.rds')
-snp.annot.rds = file.path(cloud.dir, 'projects/scphaser/nogit/data/borel', 'snp.annot.rds')
+ref.counts.rds = file.path(ac.dir, 'ref.counts.rds')
+alt.counts.rds = file.path(ac.dir, 'alt.counts.rds')
+snp.annot.rds = file.path(ac.dir, 'snp.annot.rds')
 
 main <- function(){
 
@@ -41,7 +45,7 @@ main <- function(){
     
     ##snp info
     if(0){ #Once and for all
-        snp.tab = file.path(snpdir, 'UCF1014.bcf.vcf.snv.het.dp.gene.dbsnp')
+        snp.tab = file.path(snpdir, 'UCF1014.bcf.vcf.snv.het.dp.gene.dbsnp') ##see log.sh (joined DNA variant calls with "/mnt/kauffman/edsgard/rsync/work/rspd/data/external/dbsnp/20141222/annovar/hg19.sao.vld.refgene.sorted.tab")
         snps = read.table(snp.tab, sep = '\t', stringsAsFactors = FALSE)
         colnames(snps) = c('chr.pos.ref.alt', 'chr', 'pos', 'id', 'ref', 'alt', 'qual', 'filter', 'info', 'format', 's1', 'rsid', 'gene', 'gene.annot')
         chr.pos = gsub(' ' , '', apply(snps[, c('chr', 'pos')], 1, paste, collapse = '.', sep = ''))
@@ -101,7 +105,8 @@ main <- function(){
     samples = names(sample2mat.annot.list)
     n.samples = length(samples) #163
     rsids = unique(unlist(lapply(sample2mat.annot.list, '[[', 'rsid')))
-    n.rsid = length(rsids) #231,075
+    n.rsid = length(rsids) 
+    print(n.rsid) #500k: 146518; 750k: 220,011; all: 231,075
     
     ref.mat = matrix(0, nrow = n.rsid, ncol = n.samples, dimnames = list(rsids, samples))
     alt.mat = ref.mat
@@ -120,6 +125,8 @@ main <- function(){
 
     
     ##Dump
+    print(ref.counts.rds)
+    dir.create(dirname(ref.counts.rds))
     saveRDS(ref.mat, file = ref.counts.rds)
     saveRDS(alt.mat, file = alt.counts.rds)
 
@@ -135,8 +142,11 @@ main <- function(){
     snp.filt = cbind(snp.filt, var, feat, stringsAsFactors = FALSE)
     snp.filt = snp.filt[, c('feat', 'var', 'chr', 'pos', 'ref', 'alt', 'gene.annot')]
 
+    print(length(rsids))
     snp.filt = snp.filt[rsids, ]
-    
+
+    ##Dump
+    print(snp.annot.rds)    
     saveRDS(snp.filt, file = snp.annot.rds)
     
 }

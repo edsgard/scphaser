@@ -3,7 +3,7 @@ R package for haplotype phasing using single-cell RNA-seq data.
 
 ## Installation
 
-Installation can be done via the devtools command:
+Installation can be done via the devtools package:
 ```R
 library('devtools')
 devtools::install_github('edsgard/scphaser')

@@ -10,6 +10,7 @@
 
 ##Params
 sys = 'rs13'
+sys = 'dna'
 
 
 ##*###
@@ -97,7 +98,14 @@ main <- function(){
     param2perf = tidyr::unite(param2perf, in.meth.w, input, method, weigh, remove = FALSE, sep = '.')
     weigh.num = as.numeric(param2perf[, 'weigh'])
     param2perf = cbind(param2perf, weigh.num);
+    
+    ##add feat.frac.n
+    param2perf[which(param2perf[, 'min_acount'] == 3 & param2perf[, 'fc'] == 3 & param2perf[, 'nmincells'] == 3), ]
+    max.n = max(param2perf[, 'feat.n'])
+    feat.frac.n = param2perf[, 'feat.n'] / max.n
+    param2perf = cbind(param2perf, feat.frac.n)
     which(unlist(lapply(param2perf, is.factor)))
+        
     ##TBD: check treatment of NAs in check_phase    
 
     ##Dump
@@ -111,11 +119,14 @@ main <- function(){
     ##*###
     library('ggplot2')
 
+    param2perf = readRDS(j.rds)
+    
     j.pdf.dir = file.path(pdf_dir, paste('monoase_', mono.ase, sep = ''))
     dir.create(j.pdf.dir)
     feat.level = names(perf)
-    y.resp = c('Number of', 'Fraction erronously phased')
-    names(y.resp) = c('n', 'frac.err')
+    feat.level = 'feat'
+    y.resp = c('Fraction of', 'Fraction erronously phased')
+    names(y.resp) = c('frac.n', 'frac.err')
     
     for(j.y.resp.name in names(y.resp)){
         for(j.feat.level in feat.level){
@@ -141,7 +152,8 @@ main <- function(){
             
             ##Background
             gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
-
+            gg = gg + theme(axis.line.x = element_line(color="black", size = 0.5), axis.line.y = element_line(color="black", size = 0.5))
+            
             ##ticks
             gg = gg + theme(axis.text.x = element_text(colour="black"), axis.text.y = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
 
@@ -158,6 +170,7 @@ main <- function(){
     }    
 
     ##table
+    mono.ase = 0.1
     j.rds = file.path(rds_dir, paste('monoase_', mono.ase, sep = ''), 'param2perf.rds')
     param2perf = readRDS(j.rds)
     param2perf.filt = dplyr::filter(param2perf, nmincells == 5, fc == 3, min_acount == 3)
@@ -232,22 +245,33 @@ main <- function(){
     ##*###
     ##Barplot
     ##*###
+    library('ggplot2')
     gg.data = comb.perf
     var.frac.right = 1 - gg.data[, 'var.frac.err']
     gg.data = cbind(gg.data, var.frac.right)
+
+    ##order in.meth.w
+    gg.data[, 'in.meth.w'] = factor(gg.data[, 'in.meth.w'], levels = rev(c('ac.exhaust.TRUE', 'ac.exhaust.FALSE', 'ac.cluster.TRUE', 'ac.cluster.FALSE', 'gt.exhaust.TRUE', 'gt.exhaust.FALSE', 'gt.cluster.TRUE', 'gt.cluster.FALSE')))
+    
     gg = ggplot(gg.data, aes_string(x = 'in.meth.w', y = 'var.frac.right'))
     gg = gg + geom_bar(stat = 'identity')
-    gg = gg + facet_grid(~ dataset)
+    ##gg = gg + geom_point()
+    gg = gg + facet_wrap(~ dataset, ncol = 1)
     gg = gg + xlab('') + ylab('Fraction correctly phased genes')
     gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
     gg = gg + theme(axis.text.x = element_text(colour="black"), axis.text.y = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
     gg = gg + theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
     gg = gg + geom_hline(yintercept = 0.95, colour = 'gray', linetype = 'dashed')
-    ##gg = gg + scale_y_continuous(breaks = c(seq(0, 1, 0.1), 0.95))
-    gg = gg + scale_y_continuous(breaks = c(seq(0, 1, 0.25), 0.9, 0.95))
+    gg = gg + theme(axis.line.x = element_line(color="black", size = 0.5), axis.line.y = element_line(color="black", size = 0.5))
+    
+    ##gg = gg + scale_y_continuous(breaks = c(seq(0, 1, 0.25), 0.9, 0.95))
+    gg = gg + scale_y_continuous(breaks = c(seq(0.5, 1, 0.1), 0.95))
+    gg = gg + coord_flip(ylim = c(0.5, 1))
+    
     j.pdf = file.path(pdf_dir, 'frac.vars.err.mouse_human.pdf')
-    pdf.h = 3
+    pdf.h = 3.3
     pdf.w = 5
+    
     pdf(j.pdf, height = pdf.h, width = pdf.w)
     print(gg)
     dev.off()

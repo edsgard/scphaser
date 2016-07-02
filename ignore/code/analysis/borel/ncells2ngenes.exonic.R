@@ -24,8 +24,6 @@ if(sys == 'rs13'){
     cloud.dir = '/Volumes/Data/cloud/btsync/work/rspd'
 }
 
-data.dir = file.path(cloud.dir, 'projects/scphaser/nogit/data/borel')
-
 ##OUT
 out_rds_dir = '../nogit/data/borel'
 out_pdf_dir = './ignore/res/borel/pdf'
@@ -36,12 +34,13 @@ out_pdf_dir = './ignore/res/borel/pdf'
 ##*###
 
 ##IN
-ref.counts.rds = file.path(data.dir, paste('ref', '.counts.rds', sep = ''))
-alt.counts.rds = file.path(data.dir, paste('alt', '.counts.rds', sep = ''))
-snp.annot.rds = file.path(data.dir, 'snp.annot.rds')
+ref.counts.rds = file.path(cloud.dir, 'projects/scphaser/nogit/data/borel', paste('ref', '.counts.rds', sep = ''))
+alt.counts.rds = file.path(cloud.dir, 'projects/scphaser/nogit/data/borel', paste('alt', '.counts.rds', sep = ''))
+snp.annot.rds = file.path(cloud.dir, 'projects/scphaser/nogit/data/borel', 'snp.annot.rds')
 
 ##OUT
-ncells2ngenes_rds = file.path(out_rds_dir, 'ncells2ngenes.replace_no.rds')
+ncells2ngenes_rds = file.path(out_rds_dir, 'ncells2ngenes.replace_no.intronic_no.rds')
+##
 
 ##Libs
 source('./ignore/code/analysis/performance.R')
@@ -65,9 +64,16 @@ main <- function(){
     feat2nvars = table(acset[['featdata']][, 'feat'])
     table(feat2nvars) #16: 159
 
+    ##Filter out intronic vars
+    keep.annot = setdiff(unique(featdata[, 'gene.annot']), c('intronic', 'ncRNA_intronic'))
+    featdata.exonic = merge(featdata, as.matrix(keep.annot), by.x = 'gene.annot', by.y = 1)
+    vars.exonic = featdata.exonic[, 'var']
+    acset = subset_rows(acset, vars.exonic)
+    length(unique(acset[['featdata']][, 'feat'])) #6,523
+    
     ##Filter vars with 0 counts
     acset = filter_zerorow(acset)
-    lapply(acset, dim) #230,674    163
+    lapply(acset, dim) #16,124    163
     
     ##Call gt
     min_acount = 3
@@ -80,18 +86,14 @@ main <- function(){
     if(!(mono.ase == 0)){
         acset = filter_homovars(acset, alpha = alpha, mono.ase = mono.ase)
     }
-    lapply(acset, dim) #220,793    163
+    lapply(acset, dim) #13,951    163
 
     ##Filter variants on n.cells monoallelic and feats with < 2 j.vars
     nmincells = 5
-    nminvar = 2
-
-    acset = filter_var_gt(acset, nmincells)
-    lapply(acset, dim) #27,707; 163
-    j.acset = filter_feat_nminvar(acset, nminvar)
-    lapply(j.acset, dim) #27,410; 163
+    nminvar = 2    
+    acset = filter_acset(acset, nmincells, nminvar)
+    lapply(acset, dim) #1,597; 163
     length(unique(acset[['featdata']][, 'feat']))
-    ##3,155
 
     
     ##*###
@@ -126,11 +128,11 @@ main <- function(){
     ncells2ngenes = cbind(ncells2ngenes, nvars)
 
     ##get fraction of genes
-    n.bg.genes = 15556 ##see ngenes.R
+    n.bg.genes = 5706 ##see ngenes.R
     frac.genes = ncells2ngenes[, 'ngenes'] / n.bg.genes
-    ##3044 / 15556 = 19.6%
+    ##1590 / 5706 = 27.9%
     ncells2ngenes = cbind(ncells2ngenes, frac.genes)
-
+    
     ##Dump
     saveRDS(ncells2ngenes, file = ncells2ngenes_rds)
 
@@ -159,13 +161,13 @@ main <- function(){
     gg = gg + xlab('Number of sequenced cells')
     gg = gg + ylab('Number of phasable genes')
 
-    j.pdf = file.path(out_pdf_dir, 'ncells2ngenes.replace_no.pdf')
+    j.pdf = file.path(out_pdf_dir, 'ncells2ngenes.replace_no.intronic_no.pdf')
     dir.create(dirname(j.pdf), recursive = TRUE)
     pdf(j.pdf)
     plot(gg)
     dev.off()
 
-    
+    ##frac.cells
     errbar.w = 3
     
     gg = ggplot(ncells2ngenes, aes_string(x = 'ncells', y = 'frac.genes'))
@@ -173,7 +175,6 @@ main <- function(){
     gg = gg + geom_errorbar(stat = 'summary', fun.data = mean_se, width = errbar.w)
 
     ##tick breaks
-    ##gg = gg + coord_cartesian(ylim = c(800, 3050))
     ##gg = gg + scale_y_continuous(breaks = seq(1000, 3000, 500))
     gg = gg + scale_x_continuous(breaks = c(seq(25, 150, 25), 163))
     
@@ -181,14 +182,15 @@ main <- function(){
     gg = gg + theme(panel.grid.major = element_blank(), panel.grid.minor = element_blank(), axis.line = element_line(colour = "black")) + theme(panel.background = element_blank())
     gg = gg + theme(axis.text = element_text(colour="black"), axis.ticks = element_line(colour = 'black'))
     gg = gg + xlab('Number of sequenced cells')
-    gg = gg + ylab('Number of phasable genes')
+    gg = gg + ylab('Fraction phasable genes')
 
-    j.pdf = file.path(out_pdf_dir, 'ncells2fracgenes.replace_no.pdf')
+    j.pdf = file.path(out_pdf_dir, 'ncells2fracgenes.replace_no.intronic_no.pdf')
     dir.create(dirname(j.pdf), recursive = TRUE)
     pdf(j.pdf)
     plot(gg)
     dev.off()
 
+    
 }
 
 filter_acset_par <- function(j.param, paramset, acset, nmincells = 5, nminvar = 2){
