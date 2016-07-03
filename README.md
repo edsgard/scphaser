@@ -1,7 +1,7 @@
 ## About
 scphaser is an R package for haplotype phasing using single-cell RNA-seq data.
 
-scphaser is available free to use under the <a href="./LICENSE">GNU GPL version 3
+scphaser is available free to use under the <a href="./inst/doc/LICENSE">GNU GPL version 3
 license</a>.
 
 ## Installation
