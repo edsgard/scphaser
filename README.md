@@ -17,12 +17,13 @@ install.packages('scphaser')
 
 ## Tutorial and Reference Manual
 Once you've installed scphaser you will be able to follow the vignette
-which will walk you through a tutorial of how to phase variants using scphaser, see "inst/doc/scphaser.html".
+which will walk you through a tutorial of how to phase variants using
+scphaser. You can open it by:
+```R
+vignette('scphaser')
+```
 
-The function reference manual can be found at "inst/doc/scphaser.pdf"
-print(vignette(topic = 'scphaser', package = 'scphaser'))
-
-
+The function reference manual can be found at "doc/scphaser.pdf"
 You can also use ?fcn to get help for specific functions, for example:
 ```R
 library('scphaser')
