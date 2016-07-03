@@ -23,9 +23,15 @@ scphaser. You can open it by:
 vignette('scphaser')
 ```
 
-The function reference manual can be found at "doc/scphaser.pdf"
-You can also use ?fcn to get help for specific functions, for example:
+To get help for specific functions you can use ?fcn, for example:
 ```R
 library('scphaser')
 ?phase
+```
+
+The complete function reference manual for all functions can be found
+at "doc/refman.pdf" within the installed library directory. You can
+also view the latest version by:
+```R
+browseURL('https://github.com/edsgard/scphaser/tree/master/inst/doc/refman.pdf')
 ```
