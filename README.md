@@ -20,7 +20,11 @@ Once you've installed scphaser you will be able to follow the vignette
 which will walk you through a tutorial of how to phase variants using scphaser, see "inst/doc/scphaser.html".
 
 The function reference manual can be found at "inst/doc/scphaser.pdf"
-or you can use the ?fcn to get help, for example:
+print(vignette(topic = 'scphaser', package = 'scphaser'))
+
+
+You can also use ?fcn to get help for specific functions, for example:
 ```R
+library('scphaser')
 ?phase
 ```

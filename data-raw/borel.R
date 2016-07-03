@@ -22,5 +22,5 @@ main <- function(){
 
     #dump
     devtools::use_data(borel, overwrite = T)    
-    ##1.7M (too big to be part of package, would need to create a separate dataset package in that case)    
+    ##1.7M (and, not allowed to share this data)
 }
