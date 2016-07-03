@@ -21,3 +21,4 @@ Suggests:
     rmarkdown
 VignetteBuilder: knitr
 RoxygenNote: 5.0.1
+Encoding: UTF-8

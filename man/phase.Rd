@@ -4,7 +4,7 @@
 \alias{phase}
 \title{Phasing of alleles}
 \usage{
-phase(acset, input = "gt", weigh = FALSE, method = "exhaust",
+phase(acset, input = "ac", weigh = FALSE, method = "exhaust",
   nvars_max = 10, verbosity = -1, bp_param = BiocParallel::SerialParam())
 }
 \arguments{

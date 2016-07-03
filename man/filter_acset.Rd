@@ -4,7 +4,7 @@
 \alias{filter_acset}
 \title{Filter variants and features}
 \usage{
-filter_acset(acset, nmincells, nminvar = 2, feat_filter = FALSE)
+filter_acset(acset, nmincells = 5, nminvar = 2, feat_filter = FALSE)
 }
 \arguments{
 \item{acset}{An acset list created by \code{\link{new_acset}}. It must contain
