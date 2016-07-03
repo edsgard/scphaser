@@ -71,7 +71,7 @@
 #' head(acset[['phasedfeat']])
 #' 
 #' @export
-phase <- function(acset, input = 'gt', weigh = FALSE, method = 'exhaust', nvars_max = 10, verbosity = -1, bp_param = BiocParallel::SerialParam()){
+phase <- function(acset, input = 'ac', weigh = FALSE, method = 'exhaust', nvars_max = 10, verbosity = -1, bp_param = BiocParallel::SerialParam()){
     
     ##feat2vars
     featdata = acset[['featdata']]
@@ -1103,7 +1103,7 @@ subset_feat <- function(acset, feat){
 #' acset_filt = filter_acset(acset, nmincells, nminvar)
 #' 
 #' @export
-filter_acset <- function(acset, nmincells, nminvar = 2, feat_filter = FALSE){
+filter_acset <- function(acset, nmincells = 5, nminvar = 2, feat_filter = FALSE){
 
     if(feat_filter){
 

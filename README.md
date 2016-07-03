@@ -1,5 +1,8 @@
-# scphaser
-R package for haplotype phasing using single-cell RNA-seq data.
+## About
+scphaser is an R package for haplotype phasing using single-cell RNA-seq data.
+
+scphaser is available free to use under the <a href="./LICENSE">GNU GPL version 3
+license</a>.
 
 ## Installation
 
@@ -10,19 +13,28 @@ devtools::install_github('edsgard/scphaser')
 ```
 
 Upon publication scphaser will also be submitted to CRAN, the R
-package repository, where installation can be done by:
-```R
-install.packages('scphaser')
-```
+package repository.
 
-## Tutorial and Reference Manual
-Once you've installed scphaser you will be able to follow the vignette
-which will walk you through a tutorial of how to phase variants using
-scphaser. You can open it by:
+## Tutorial
+Once you've installed scphaser you will be able to follow the
+vignette-tutorial. You can open it by:
 ```R
 vignette('scphaser')
 ```
 
+## Minimal example
+```R
+library('scphaser')
+data(marinov)
+acset = new_acset(featdata = marinov[['featdata']], refcount = marinov[['refcount']],
+	altcount = marinov[['altcount']], phenodata = marinov[['phenodata']])
+acset = call_gt(acset)
+acset = filter_acset(acset)
+acset = phase(acset)
+head(acset[['phasedfeat']])
+```
+
+## Function reference manual
 To get help for specific functions you can use ?fcn, for example:
 ```R
 library('scphaser')
@@ -35,3 +47,10 @@ also view the latest version by:
 ```R
 browseURL('https://github.com/edsgard/scphaser/tree/master/inst/doc/refman.pdf')
 ```
+
+## Citation
+
+If you use scphaser, please cite it as follows:
+
+Edsgärd D. <em>et al.</em>, scphaser: Haplotype Inference Using
+Single-Cell RNA-Seq Data, <em>Bioinformatics</em>, 2016 (in revision)
