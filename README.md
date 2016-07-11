@@ -12,7 +12,7 @@ library('devtools')
 devtools::install_github('edsgard/scphaser')
 ```
 
-Upon publication scphaser will also be submitted to CRAN, the R
+scphaser will in the near future be submitted to CRAN, the R
 package repository.
 
 ## Tutorial
