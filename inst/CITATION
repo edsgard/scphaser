@@ -10,11 +10,11 @@ citEntry(entry = "Article",
   volume       = "TBD",
   number       = "TBD",
   pages        = "TBD",
-  url          = "IN REVIEW",
+  url          = "ACCEPTED",
 
   textVersion  =
   paste("Daniel Edsgärd et al.,",
         "scphaser: Haplotype Inference Using Single-Cell RNA-Seq Data,",
         "Bioinformatics, 2016",
-        "(in review)")
+        "(Accepted)")
 )

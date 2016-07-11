@@ -53,4 +53,5 @@ browseURL('https://github.com/edsgard/scphaser/tree/master/inst/doc/refman.pdf')
 If you use scphaser, please cite it as follows:
 
 Edsgärd D. <em>et al.</em>, scphaser: Haplotype Inference Using
-Single-Cell RNA-Seq Data, <em>Bioinformatics</em>, 2016
+Single-Cell RNA-Seq Data, <em>Bioinformatics</em>, 2016 (Accepted, 9th
+of July, 2016)
