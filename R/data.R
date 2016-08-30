@@ -26,7 +26,7 @@
 #' \item RNA-seq fastq files \url{ftp://ftp-trace.ncbi.nlm.nih.gov/sra/sra-instant/reads/ByStudy/sra/SRP/SRP018/SRP018838/}
 #' \item{RNA-seq meta-info}{\url{ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE44nnn/GSE44618}}
 #' \item{Haplo-genomes} {\url{http://sv.gersteinlab.org/NA12878_diploid}}
-#' \item{DNA-seq variants} {\url{http://sv.gersteinlab.org/NA12878_diploid/CEUTrio.HiSeq.WGS.b37.bestPractices.phased.hg19.vcf}}
+#' \item{DNA-seq variants} {\url{http://sv.gersteinlab.org/NA12878_diploid/NA12878_diploid_2012_dec16/CEUTrio.HiSeq.WGS.b37.bestPractices.phased.hg19.vcf}}
 #' }
 #' @usage data(marinov)
 "marinov"

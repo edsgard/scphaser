@@ -248,7 +248,7 @@ wphase_cluster_gt <- function(acset, vars){
     }
     
     ##cluster
-    cluster_ind = cluster::pam(as.dist(distmat), k = 2, diss = TRUE, cluster.only = TRUE)
+    cluster_ind = cluster::pam(stats::as.dist(distmat), k = 2, diss = TRUE, cluster.only = TRUE)
 
     ##flip vars belonging to one of the clusters
     vars2flip = vars[which(cluster_ind == 2)]
@@ -288,7 +288,7 @@ phase_cluster_ase <- function(acset, vars){
     ase[is.na(ase)] = 0.5        
     
     ##calculate distance matrix between pairs of variants
-    var_dist = dist(ase, method = 'euclidean')
+    var_dist = stats::dist(ase, method = 'euclidean')
     
     ##cluster
     cluster_ind = cluster::pam(var_dist, k = 2, diss = TRUE, cluster.only = TRUE)
@@ -355,7 +355,7 @@ wphase_cluster_ase <- function(acset, vars){
     }
     
     ##cluster
-    cluster_ind = cluster::pam(as.dist(distmat), k = 2, diss = TRUE, cluster.only = TRUE)
+    cluster_ind = cluster::pam(stats::as.dist(distmat), k = 2, diss = TRUE, cluster.only = TRUE)
 
     ##flip vars belonging to one of the clusters
     vars2flip = vars[which(cluster_ind == 2)]
@@ -614,7 +614,7 @@ get_wvar_gt <- function(gt, weights){
 get_var_ase <- function(ase){
 
     ##sum the vars from every cell (assume cells are independent observations)
-    vartot = sum(apply(ase, 2, var), na.rm = TRUE)
+    vartot = sum(apply(ase, 2, stats::var), na.rm = TRUE)
 
     return(vartot)
 }
@@ -672,7 +672,7 @@ counts2weight <- function(counts, p = 0.5){
     if(counts[1] == counts[2]){
         weight = 0
     }else{
-        weight = 1 - 2 * pbinom(min(counts), sum(counts), p)
+        weight = 1 - 2 * stats::pbinom(min(counts), sum(counts), p)
     }
     return(weight)
 }
@@ -1417,7 +1417,7 @@ filter_homovars <- function(acset, alpha = 0.1, mono_ase = 0.1){
     n.allele2cells = n.allele2cells[setdiff(rownames(n.allele2cells), bi.rs), ]
     
     ##get binom pval
-    pvals = apply(n.allele2cells, 1, function(j.c){pvals = binom.test(j.c['alt'], j.c['sum'], p = 0.5, alternative = 'two.sided')$p.value})
+    pvals = apply(n.allele2cells, 1, function(j.c){pvals = stats::binom.test(j.c['alt'], j.c['sum'], p = 0.5, alternative = 'two.sided')$p.value})
     pass.rs = names(pvals)[which(pvals >= alpha)]
     pass.rs = c(pass.rs, bi.rs)
     

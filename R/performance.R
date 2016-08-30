@@ -100,7 +100,7 @@ get_phase_pval <- function(acset, nperm = 100, fixedrowmargin = FALSE){
     ##Calculate null-dist
     ##*###
     cat('\n')
-    progbar = txtProgressBar(min = 0, max = nperm, style = 3)
+    progbar = utils::txtProgressBar(min = 0, max = nperm, style = 3)
     for(jperm in 1:nperm){
         
         ##randomize
@@ -119,7 +119,7 @@ get_phase_pval <- function(acset, nperm = 100, fixedrowmargin = FALSE){
         feats = names(j.nullscores)
         nullscore[feats, jperm] = j.nullscores
 
-        setTxtProgressBar(progbar, jperm)
+        utils::setTxtProgressBar(progbar, jperm)
     }
 
 
@@ -324,16 +324,16 @@ plot_conc <- function(acset, feats = NA, cex = 0.5){
     y_txt = c(max_val - ylim_txtmargin, - max_val + ylim_txtmargin)
     x_txt = c(20, 20)
     
-    par(mfrow = c(2, 1), cex = cex)    
-    barplot(conc_pre[feats], ylim = ylim, las = 2, names = feats, col = "darkblue", border = "darkblue", main = "Pre-phasing", ylab = "Number of cells")    
-    barplot(-inconc_pre[feats], add = TRUE, las = 2, col = "darkgreen", border = "darkgreen")
-    text(x = x_txt, y = y_txt, c("Concordant", "Incordordant"), col = c("darkblue", "darkgreen"))
-    abline(h = 0)
+    graphics::par(mfrow = c(2, 1), cex = cex)    
+    graphics::barplot(conc_pre[feats], ylim = ylim, las = 2, names = feats, col = "darkblue", border = "darkblue", main = "Pre-phasing", ylab = "Number of cells")    
+    graphics::barplot(-inconc_pre[feats], add = TRUE, las = 2, col = "darkgreen", border = "darkgreen")
+    graphics::text(x = x_txt, y = y_txt, c("Concordant", "Incordordant"), col = c("darkblue", "darkgreen"))
+    graphics::abline(h = 0)
 
-    barplot(conc_post[feats], ylim = ylim, las = 2, names = feats, col = "darkblue", border = "darkblue", main = "Post-phasing", ylab = "Number of cells")    
-    barplot(-inconc_post[feats], add = TRUE, las = 2, col = "darkgreen", border = "darkgreen")
-    text(x = x_txt, y = y_txt, c("Concordant", "Incordordant"), col = c("darkblue", "darkgreen"))
-    abline(h = 0)
+    graphics::barplot(conc_post[feats], ylim = ylim, las = 2, names = feats, col = "darkblue", border = "darkblue", main = "Post-phasing", ylab = "Number of cells")    
+    graphics::barplot(-inconc_post[feats], add = TRUE, las = 2, col = "darkgreen", border = "darkgreen")
+    graphics::text(x = x_txt, y = y_txt, c("Concordant", "Incordordant"), col = c("darkblue", "darkgreen"))
+    graphics::abline(h = 0)
     
 }
 
