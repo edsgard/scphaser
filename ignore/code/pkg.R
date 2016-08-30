@@ -90,5 +90,15 @@ main <- function(){
     ##Pre-flight Readme.md -> html
     ##*###
     ##grip git/README.md --export README.html
+
+
+    ##*###
+    ##CRAN release
+    ##*###
+    ##cran-comments.md
+    devtools::build()
+    ##R CMD check scphaser_1.0.0.tar.gz
+    devtools::build_win()
+    devtools::revdep_check()
     
 }
