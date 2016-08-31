@@ -82,8 +82,7 @@ main <- function(){
     file.rename('vignettes/meta.Rmd', 'vignettes/scphaser.Rmd')
 
     ##knit
-    devtools::build_vignettes()
-    devtools::build() ##this will also build vignettes
+    devtools::build_vignettes() ##copied to inst/doc
 
     
     ##*###
@@ -97,8 +96,30 @@ main <- function(){
     ##*###
     ##cran-comments.md
     devtools::build()
-    ##R CMD check scphaser_1.0.0.tar.gz
-    devtools::build_win()
+    ##R CMD check --as-cran scphaser_1.0.0.tar.gz
+    devtools::build_win(version = 'R-release')
+    devtools::build_win(version = 'R-devel')
     devtools::revdep_check()
+
+    
+    ##*###
+    ##Check citation
+    ##*###
+    ##doesnt work: install.packages(pkg = 'file:///mnt/kauffman/edsgard/cloud/btsync/work/rspd/projects/scphaser/scphaser_1.0.0.tar.gz', repos = NULL, type = 'source')
+    ##R CMD INSTALL scphaser_1.0.0.ubuntu.tar.gz
+    citation('scphaser')
+    vignette('scphaser')
+    remove.packages('scphaser')
+
+    
+    ##*##
+    ##Before submission
+    ##*###
+    ##rerun devtools::document (man/*.Rd newer than R/data.R)
+    ##rerun devtools::build_vignettes() above
+    ##rerun R CMD Rd2pdf above
+    ##check if citation has been updated
+    ##check vignette
+    
     
 }
