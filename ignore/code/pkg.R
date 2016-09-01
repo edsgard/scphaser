@@ -120,6 +120,11 @@ main <- function(){
     ##rerun R CMD Rd2pdf above
     ##check if citation has been updated
     ##check vignette
+
     
+    ##*##
+    ##After submission
+    ##*##
+    ##Once accepted, tag the release!
     
 }
