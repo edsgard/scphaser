@@ -5,8 +5,7 @@ scphaser is available free to use under the <a href="./inst/doc/LICENSE">GNU GPL
 license</a>.
 
 ## Installation
-scphaser is available at CRAN, the R
-package repository and can be installed by:
+scphaser is available at the R package repository CRAN and can be installed by:
 ```R
 source("http://www.bioconductor.org/biocLite.R")
 biocLite("BiocParallel")
